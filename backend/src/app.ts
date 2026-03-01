@@ -1,6 +1,11 @@
 import express from "express";
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+import authRoutes from "./routes/auth.routes";
+import { protect } from "./middleware/auth.middleware";
 import User from "./models/User";
+
+dotenv.config();
 
 const app = express();
 
@@ -8,6 +13,8 @@ const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI as string;
 
 app.use(express.json());
+
+app.use("/api/auth", authRoutes);
 
 mongoose
   .connect(MONGO_URI)
@@ -21,15 +28,10 @@ mongoose
     console.error("Mongo connection error:", err);
   });
 
-app.post("/users", async (req, res) => {
-  try {
-    const user = await User.create(req.body);
-    res.status(201).json(user);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
 app.get("/", async (req, res) => {
   res.json({ message: "Welcome to the MediaVault API!" });
+});
+
+app.get("/api/protected", protect, (req, res) => {
+  res.json({ message: "This is a protected route" });
 });
