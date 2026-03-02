@@ -9,6 +9,10 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+      - ~/.aws:/root/.aws:ro
+    environment:
+      - AWS_PROFILE=media-vault
+
     env_file:
       - .env.dev
     depends_on:

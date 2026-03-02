@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes";
 import { protect } from "./middleware/auth.middleware";
-import User from "./models/User";
+import fileRoutes from "./routes/file.routes";
 
 dotenv.config();
 
@@ -15,6 +15,7 @@ const MONGO_URI = process.env.MONGO_URI as string;
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/files", fileRoutes);
 
 mongoose
   .connect(MONGO_URI)
@@ -30,8 +31,4 @@ mongoose
 
 app.get("/", async (req, res) => {
   res.json({ message: "Welcome to the MediaVault API!" });
-});
-
-app.get("/api/protected", protect, (req, res) => {
-  res.json({ message: "This is a protected route" });
 });
