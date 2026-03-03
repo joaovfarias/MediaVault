@@ -1,10 +1,22 @@
 import { Request, Response } from "express";
 import { s3 } from "../config/s3";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import File from "../models/File";
 import User from "../models/User";
 import { HeadObjectCommand } from "@aws-sdk/client-s3";
+
+const mimeTypeToExtension: Record<string, string> = {
+  "application/pdf": "pdf",
+  "text/plain": "txt",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "video/mp4": "mp4",
+};
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_FILES = 200;
@@ -18,6 +30,101 @@ const allowedMimeTypes = [
   "video/mp4",
 ];
 
+const getDownloadFilename = (originalName: string, mimeType: string) => {
+  const hasExtension = /\.[^./\\]+$/.test(originalName);
+
+  if (hasExtension) {
+    return originalName;
+  }
+
+  const extension = mimeTypeToExtension[mimeType];
+  return extension ? `${originalName}.${extension}` : originalName;
+};
+
+export const deleteFile = async (req: Request, res: Response) => {
+  try {
+    const fileId = req.params.id;
+    const userId = req.user!._id;
+
+    const file = await File.findOne({ _id: fileId, owner: userId });
+
+    if (!file) {
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    if (file.owner.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // Delete from S3
+    await s3.send(
+      new DeleteObjectCommand({
+        Bucket: "media-vault-83729",
+        Key: file.s3Key,
+      }),
+    );
+
+    await User.findByIdAndUpdate(userId, { $inc: { storageUsed: -file.size } });
+
+    await file.deleteOne();
+
+    res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error deleting file" });
+  }
+};
+
+export const downloadFile = async (req: Request, res: Response) => {
+  try {
+    const fileId = req.params.id;
+    const userId = req.user!._id;
+
+    const file = await File.findOne({ _id: fileId, owner: userId });
+
+    if (!file) {
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    if (file.owner.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const downloadFilename = getDownloadFilename(
+      file.originalName,
+      file.mimeType,
+    );
+
+    const command = new GetObjectCommand({
+      Bucket: "media-vault-83729",
+      Key: file.s3Key,
+      ResponseContentDisposition: `attachment; filename="${downloadFilename}"`,
+    });
+
+    const downloadUrl = await getSignedUrl(s3, command, {
+      expiresIn: 60, // 1 minute
+    });
+
+    res.status(200).json({ downloadUrl });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error generating download URL" });
+  }
+};
+
+// TODO - add filtering by type, sort by date.
+export const getUserFiles = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!._id;
+
+    const files = await File.find({ owner: userId }).sort({ createdAt: -1 });
+
+    res.status(200).json(files);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching user files" });
+  }
+};
+
 export const createFileRecord = async (req: Request, res: Response) => {
   try {
     const { s3Key, originalName, mimeType } = req.body;
@@ -27,9 +134,8 @@ export const createFileRecord = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Missing file data" });
     }
 
-    // Ensure file belongs to user
-    if (!s3Key.startsWith(`users/${userId}/`)) {
-      return res.status(403).json({ message: "Invalid file key" });
+    if (!s3Key.startsWith(`${userId}/`)) {
+      return res.status(400).json({ message: "Invalid file key" });
     }
 
     // Verify file exists in S3
@@ -104,6 +210,7 @@ export const generateUploadUrl = async (req: Request, res: Response) => {
       Bucket: "media-vault-83729",
       Key: uniqueKey,
       ContentType: mimeType,
+      ServerSideEncryption: "AES256",
     });
 
     const uploadUrl = await getSignedUrl(s3, command, {

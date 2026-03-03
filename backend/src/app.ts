@@ -2,7 +2,6 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes";
-import { protect } from "./middleware/auth.middleware";
 import fileRoutes from "./routes/file.routes";
 
 dotenv.config();
