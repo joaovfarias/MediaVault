@@ -49,11 +49,11 @@ export const deleteFile = async (req: Request, res: Response) => {
     const file = await File.findOne({ _id: fileId, owner: userId });
 
     if (!file) {
-      return res.status(404).json({ message: "File not found" });
+      return res.status(404).json({ message: "Arquivo não encontrado" });
     }
 
     if (file.owner.toString() !== userId.toString()) {
-      return res.status(403).json({ message: "Access denied" });
+      return res.status(403).json({ message: "Acesso negado" });
     }
 
     // Delete from S3
@@ -71,7 +71,7 @@ export const deleteFile = async (req: Request, res: Response) => {
     res.status(204).send();
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error deleting file" });
+    res.status(500).json({ message: "Erro ao deletar arquivo" });
   }
 };
 
@@ -83,11 +83,11 @@ export const downloadFile = async (req: Request, res: Response) => {
     const file = await File.findOne({ _id: fileId, owner: userId });
 
     if (!file) {
-      return res.status(404).json({ message: "File not found" });
+      return res.status(404).json({ message: "Arquivo não encontrado" });
     }
 
     if (file.owner.toString() !== userId.toString()) {
-      return res.status(403).json({ message: "Access denied" });
+      return res.status(403).json({ message: "Acesso negado" });
     }
 
     const downloadFilename = getDownloadFilename(
@@ -108,7 +108,7 @@ export const downloadFile = async (req: Request, res: Response) => {
     res.status(200).json({ downloadUrl });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error generating download URL" });
+    res.status(500).json({ message: "Erro ao gerar URL de download" });
   }
 };
 
@@ -121,7 +121,7 @@ export const getUserFiles = async (req: Request, res: Response) => {
 
     res.status(200).json(files);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching user files" });
+    res.status(500).json({ message: "Erro ao buscar arquivos do usuário" });
   }
 };
 
@@ -131,11 +131,11 @@ export const createFileRecord = async (req: Request, res: Response) => {
     const userId = req.user!._id;
 
     if (!s3Key || !originalName || !mimeType) {
-      return res.status(400).json({ message: "Missing file data" });
+      return res.status(400).json({ message: "Dados do arquivo ausentes" });
     }
 
     if (!s3Key.startsWith(`${userId}/`)) {
-      return res.status(400).json({ message: "Invalid file key" });
+      return res.status(400).json({ message: "Chave de arquivo inválida" });
     }
 
     // Verify file exists in S3
@@ -151,17 +151,19 @@ export const createFileRecord = async (req: Request, res: Response) => {
     // Enforce file count limit
     const fileCount = await File.countDocuments({ owner: userId });
     if (fileCount >= MAX_FILES) {
-      return res.status(400).json({ message: "File limit reached" });
+      return res.status(400).json({ message: "Limite de arquivos atingido" });
     }
 
     // Enforce total storage limit
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "Usuário não encontrado" });
     }
 
     if (user.storageUsed + fileSize > MAX_TOTAL_STORAGE) {
-      return res.status(400).json({ message: "Storage limit exceeded" });
+      return res
+        .status(400)
+        .json({ message: "Limite de armazenamento excedido" });
     }
 
     // Save file metadata
@@ -179,7 +181,7 @@ export const createFileRecord = async (req: Request, res: Response) => {
 
     res.status(201).json(file);
   } catch (error) {
-    res.status(500).json({ message: "Error saving file record" });
+    res.status(500).json({ message: "Erro ao salvar registro do arquivo" });
   }
 };
 
@@ -188,17 +190,17 @@ export const generateUploadUrl = async (req: Request, res: Response) => {
     const { filename, mimeType, size } = req.body;
 
     if (!filename || !mimeType || !size) {
-      return res.status(400).json({ message: "Missing file data" });
+      return res.status(400).json({ message: "Dados do arquivo ausentes" });
     }
 
     if (!allowedMimeTypes.includes(mimeType)) {
-      return res.status(400).json({ message: "File type not allowed" });
+      return res.status(400).json({ message: "Tipo de arquivo não permitido" });
     }
 
     if (size > MAX_FILE_SIZE) {
       return res
         .status(400)
-        .json({ message: "Maximum file size exceeded (50MB)" });
+        .json({ message: "Tamanho máximo do arquivo excedido (50MB)" });
     }
 
     const userId = req.user!._id.toString();
@@ -210,7 +212,6 @@ export const generateUploadUrl = async (req: Request, res: Response) => {
       Bucket: "media-vault-83729",
       Key: uniqueKey,
       ContentType: mimeType,
-      ServerSideEncryption: "AES256",
     });
 
     const uploadUrl = await getSignedUrl(s3, command, {
@@ -225,7 +226,7 @@ export const generateUploadUrl = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({
-      message: "Error generating upload URL",
+      message: "Erro ao gerar URL de upload",
       error,
     });
   }

@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import cors from "cors";
 import authRoutes from "./routes/auth.routes";
 import fileRoutes from "./routes/file.routes";
 
@@ -10,8 +11,19 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI as string;
+const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "http://localhost:5173";
+
+const allowedOrigins = CORS_ORIGIN.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(express.json());
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  }),
+);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/files", fileRoutes);

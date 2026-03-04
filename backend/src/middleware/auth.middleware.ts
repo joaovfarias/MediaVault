@@ -36,7 +36,7 @@ export const protect = async (
 
       next();
     } catch (error) {
-      return res.status(401).json({ message: "Not authorized" });
+      return res.status(401).json({ message: "Não autorizado" });
     }
   }
 
