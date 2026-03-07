@@ -12,6 +12,9 @@ import { BsFiletypeMp4 } from "react-icons/bs";
 import { HiOutlineTrash } from "react-icons/hi2";
 import { Snackbar } from "@mui/material";
 
+import FilePreview from "./FilePreview";
+import RenameFile from "./RenameFile";
+
 export default function FileComponent({
   file,
 }: {
@@ -21,6 +24,9 @@ export default function FileComponent({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
   const menuContainerRef = useRef<HTMLDivElement>(null);
   const closeTimeoutRef = useRef<number | null>(null);
   const animationDuration = 200;
@@ -132,11 +138,76 @@ export default function FileComponent({
     };
   }, [isMenuVisible]);
 
+  const handlePreviewFile = async () => {
+    const previewUrl = await fetch(
+      `${API_BASE_URL}/api/files/${file._id}/download`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (previewUrl.ok) {
+      const data = (await previewUrl.json()) as { downloadUrl?: string };
+      setDownloadUrl(data.downloadUrl ?? null);
+      setIsPreviewing(true);
+    } else {
+      setSnackbarMessage("Failed to get preview URL");
+      setShowSnackbar(true);
+    }
+  };
+
+  const handleDownloadFile = async () => {
+    const downloadResponse = await fetch(
+      `${API_BASE_URL}/api/files/${file._id}/download?download=true`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (downloadResponse.ok) {
+      const data = (await downloadResponse.json()) as { downloadUrl?: string };
+      if (data.downloadUrl) {
+        const link = document.createElement("a");
+        link.href = data.downloadUrl;
+        link.download = file.originalName;
+        link.rel = "noopener noreferrer";
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        setSnackbarMessage("Download URL not available");
+        setShowSnackbar(true);
+      }
+    } else {
+      setSnackbarMessage("Failed to get download URL");
+      setShowSnackbar(true);
+    }
+  };
+
   return (
     <>
+      {isPreviewing && downloadUrl && (
+        <FilePreview
+          file={file}
+          url={downloadUrl}
+          setIsPreviewing={setIsPreviewing}
+        />
+      )}
+
+      {isEditingName && (
+        <RenameFile file={file} isEditingName={setIsEditingName} />
+      )}
       <div
         ref={menuContainerRef}
         className="relative flex flex-col text-black bg-[#f0f4f9] p-4 rounded-xl w-60 h-16 hover:bg-[#e0e8f1] cursor-pointer"
+        onClick={handlePreviewFile}
       >
         <div className="flex-1 flex items-center justify-start gap-2">
           {file.mimeType === "application/pdf" && (
@@ -152,7 +223,7 @@ export default function FileComponent({
             <BiSolidFilePng className="text-3xl text-[#4285f4]" />
           )}
           {file.mimeType === "video/mp4" && (
-            <BsFiletypeMp4 className="text-3xl text-[#4285f4]" />
+            <BsFiletypeMp4 className="text-2xl text-[#4285f4]" />
           )}
 
           <span className="text-base flex-1 text-center truncate">
@@ -160,17 +231,22 @@ export default function FileComponent({
               (file as { originalName: string }).originalName,
             )}
           </span>
-          <BsThreeDotsVertical
-            className="text-xl text-black"
-            onClick={(event) => {
-              event.stopPropagation();
+          <div
+            className="p-2 rounded-full hover:bg-gray-200"
+            onClick={(e) => {
+              e.stopPropagation();
               toggleMenu();
             }}
-          />
+          >
+            <BsThreeDotsVertical className="text-xl text-black" />
+          </div>
         </div>
 
         {isMenuVisible && (
-          <div className="absolute top-12 right-2 z-20">
+          <div
+            className="absolute top-12 right-2 z-20"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div
               className={`w-35 bg-white border border-gray-200 rounded-xl p-2 shadow-sm origin-top transform-gpu transition-all duration-200 ease-out ${
                 isMenuOpen ? "scale-y-100 opacity-100" : "scale-y-0 opacity-0"
@@ -179,6 +255,11 @@ export default function FileComponent({
               <button
                 type="button"
                 className="flex flex-row gap-3 items-center w-full text-left px-3 py-2 rounded-lg text-sm text-[#444746] hover:bg-[#e0f7fa] hover:cursor-pointer"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleDownloadFile();
+                  setIsMenuVisible(false);
+                }}
               >
                 <MdOutlineFileDownload className="text-lg text-[#444746] hover:text-[#0d47a1] cursor-pointer w-5 h-5 shrink-0" />
                 Baixar
@@ -186,6 +267,11 @@ export default function FileComponent({
               <button
                 type="button"
                 className="flex flex-row gap-3 items-center w-full text-left px-3 py-2 rounded-lg text-sm text-[#444746] hover:bg-[#e0f7fa] hover:cursor-pointer"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsEditingName(true);
+                  setIsMenuVisible(false);
+                }}
               >
                 <MdOutlineDriveFileRenameOutline className="text-lg text-[#444746] hover:text-[#0d47a1] cursor-pointer w-5 h-5 shrink-0" />
                 Renomear
@@ -193,7 +279,11 @@ export default function FileComponent({
               <button
                 type="button"
                 className="flex flex-row gap-3 items-center w-full text-left px-3 py-2 rounded-lg text-sm text-[#444746] hover:bg-[#e0f7fa] hover:cursor-pointer"
-                onClick={() => handleDeleteFile(token, file._id)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleDeleteFile(token, file._id);
+                  setIsMenuVisible(false);
+                }}
               >
                 <HiOutlineTrash className="text-lg text-[#444746] hover:text-[#0d47a1] cursor-pointer w-5 h-5 shrink-0" />
                 Deletar

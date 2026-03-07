@@ -3,6 +3,7 @@ import type { ChangeEvent } from "react";
 import { MdOutlineUploadFile } from "react-icons/md";
 import { MdOutlineDriveFolderUpload } from "react-icons/md";
 import { Snackbar } from "@mui/material";
+import { getAuthToken } from "../utils/auth";
 
 type NewUploadBarProps = {
   isVisible: boolean;
@@ -20,27 +21,6 @@ const ALLOWED_EXTENSIONS = new Set(
   Object.values(ALLOWED_MIME_TO_EXTENSION).map((ext) => ext.toLowerCase()),
 );
 const ACCEPTED_FILE_TYPES = Object.keys(ALLOWED_MIME_TO_EXTENSION).join(",");
-
-const getAuthToken = () => {
-  const directToken = localStorage.getItem("token");
-  if (directToken) {
-    return directToken;
-  }
-
-  const userRaw = localStorage.getItem("user");
-  if (userRaw) {
-    try {
-      const parsedUser = JSON.parse(userRaw) as { token?: string };
-      if (parsedUser.token) {
-        return parsedUser.token;
-      }
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
-};
 
 export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
   const [showSnackbar, setShowSnackbar] = useState(false);
@@ -73,6 +53,8 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
         }),
       },
     );
+
+    // UploadSingeFolder
 
     if (!uploadUrlResponse.ok) {
       const errorData = (await uploadUrlResponse.json().catch(() => null)) as {
@@ -220,7 +202,7 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
         >
           <div className="flex items-center">
             <MdOutlineDriveFolderUpload className="mr-2 w-5 h-5 text-[#006D7A]" />
-            <span className="text-xs">Upload de pasta</span>
+            <span className="text-xs">Criar nova pasta</span>
           </div>
         </button>
       </div>

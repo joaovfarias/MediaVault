@@ -1,76 +1,45 @@
 import { Request, Response } from "express";
-import { s3 } from "../config/s3";
 import {
-  PutObjectCommand,
-  GetObjectCommand,
-  DeleteObjectCommand,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import File from "../models/File";
-import User from "../models/User";
-import { HeadObjectCommand } from "@aws-sdk/client-s3";
+  createFileRecordForUser,
+  deleteFileForUser,
+  generateUploadUrlForUser,
+  getDownloadUrlForFile,
+  getUserFilesList,
+  renameFileForUser,
+} from "../services/file.service";
+import { AppError } from "../services/appError";
 
-const mimeTypeToExtension: Record<string, string> = {
-  "application/pdf": "pdf",
-  "text/plain": "txt",
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "video/mp4": "mp4",
-};
+const getUserIdFromRequest = (req: Request) => req.user!._id.toString();
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const MAX_FILES = 200;
-const MAX_TOTAL_STORAGE = 5 * 1024 * 1024 * 1024; // 5GB
+export const renameFile = async (req: Request, res: Response) => {
+  try {
+    const fileId = req.params.id;
+    const { newName } = req.body;
+    const userId = getUserIdFromRequest(req);
+    await renameFileForUser({ fileId, newName, userId });
 
-const allowedMimeTypes = [
-  "application/pdf",
-  "text/plain",
-  "image/jpeg",
-  "image/png",
-  "video/mp4",
-];
-
-const getDownloadFilename = (originalName: string, mimeType: string) => {
-  const hasExtension = /\.[^./\\]+$/.test(originalName);
-
-  if (hasExtension) {
-    return originalName;
+    res.status(200).json({ message: "Arquivo renomeado com sucesso" });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Erro ao renomear arquivo" });
   }
-
-  const extension = mimeTypeToExtension[mimeType];
-  return extension ? `${originalName}.${extension}` : originalName;
 };
 
 export const deleteFile = async (req: Request, res: Response) => {
   try {
     const fileId = req.params.id;
-    const userId = req.user!._id;
+    const userId = getUserIdFromRequest(req);
 
-    const file = await File.findOne({ _id: fileId, owner: userId });
-
-    if (!file) {
-      return res.status(404).json({ message: "Arquivo não encontrado" });
-    }
-
-    if (file.owner.toString() !== userId.toString()) {
-      return res.status(403).json({ message: "Acesso negado" });
-    }
-
-    // Delete from S3
-    await s3.send(
-      new DeleteObjectCommand({
-        Bucket: "media-vault-83729",
-        Key: file.s3Key,
-      }),
-    );
-
-    await User.findByIdAndUpdate(userId, { $inc: { storageUsed: -file.size } });
-
-    await file.deleteOne();
+    await deleteFileForUser({ fileId, userId });
 
     res.status(204).send();
   } catch (error) {
-    console.error(error);
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
     res.status(500).json({ message: "Erro ao deletar arquivo" });
   }
 };
@@ -78,36 +47,21 @@ export const deleteFile = async (req: Request, res: Response) => {
 export const downloadFile = async (req: Request, res: Response) => {
   try {
     const fileId = req.params.id;
-    const userId = req.user!._id;
+    const userId = getUserIdFromRequest(req);
+    const asAttachment = req.query.download === "true";
 
-    const file = await File.findOne({ _id: fileId, owner: userId });
-
-    if (!file) {
-      return res.status(404).json({ message: "Arquivo não encontrado" });
-    }
-
-    if (file.owner.toString() !== userId.toString()) {
-      return res.status(403).json({ message: "Acesso negado" });
-    }
-
-    const downloadFilename = getDownloadFilename(
-      file.originalName,
-      file.mimeType,
-    );
-
-    const command = new GetObjectCommand({
-      Bucket: "media-vault-83729",
-      Key: file.s3Key,
-      ResponseContentDisposition: `attachment; filename="${downloadFilename}"`,
-    });
-
-    const downloadUrl = await getSignedUrl(s3, command, {
-      expiresIn: 60, // 1 minute
+    const { downloadUrl } = await getDownloadUrlForFile({
+      fileId,
+      userId,
+      asAttachment,
     });
 
     res.status(200).json({ downloadUrl });
   } catch (error) {
-    console.error(error);
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
     res.status(500).json({ message: "Erro ao gerar URL de download" });
   }
 };
@@ -115,12 +69,17 @@ export const downloadFile = async (req: Request, res: Response) => {
 // TODO - add filtering by type, sort by date.
 export const getUserFiles = async (req: Request, res: Response) => {
   try {
-    const userId = req.user!._id;
+    const userId = getUserIdFromRequest(req);
+    const sortBySize = req.query.sortBySize === "true";
 
-    const files = await File.find({ owner: userId }).sort({ createdAt: -1 });
+    const files = await getUserFilesList(userId, sortBySize);
 
     res.status(200).json(files);
   } catch (error) {
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
     res.status(500).json({ message: "Erro ao buscar arquivos do usuário" });
   }
 };
@@ -128,59 +87,21 @@ export const getUserFiles = async (req: Request, res: Response) => {
 export const createFileRecord = async (req: Request, res: Response) => {
   try {
     const { s3Key, originalName, mimeType } = req.body;
-    const userId = req.user!._id;
+    const userId = getUserIdFromRequest(req);
 
-    if (!s3Key || !originalName || !mimeType) {
-      return res.status(400).json({ message: "Dados do arquivo ausentes" });
-    }
-
-    if (!s3Key.startsWith(`${userId}/`)) {
-      return res.status(400).json({ message: "Chave de arquivo inválida" });
-    }
-
-    // Verify file exists in S3
-    const headCommand = new HeadObjectCommand({
-      Bucket: "media-vault-83729",
-      Key: s3Key,
-    });
-
-    const s3Response = await s3.send(headCommand);
-
-    const fileSize = s3Response.ContentLength || 0;
-
-    // Enforce file count limit
-    const fileCount = await File.countDocuments({ owner: userId });
-    if (fileCount >= MAX_FILES) {
-      return res.status(400).json({ message: "Limite de arquivos atingido" });
-    }
-
-    // Enforce total storage limit
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "Usuário não encontrado" });
-    }
-
-    if (user.storageUsed + fileSize > MAX_TOTAL_STORAGE) {
-      return res
-        .status(400)
-        .json({ message: "Limite de armazenamento excedido" });
-    }
-
-    // Save file metadata
-    const file = await File.create({
-      owner: userId,
-      originalName,
+    const file = await createFileRecordForUser({
       s3Key,
+      originalName,
       mimeType,
-      size: fileSize,
+      userId,
     });
-
-    // Update user storage
-    user.storageUsed += fileSize;
-    await user.save();
 
     res.status(201).json(file);
   } catch (error) {
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
     res.status(500).json({ message: "Erro ao salvar registro do arquivo" });
   }
 };
@@ -188,46 +109,23 @@ export const createFileRecord = async (req: Request, res: Response) => {
 export const generateUploadUrl = async (req: Request, res: Response) => {
   try {
     const { filename, mimeType, size } = req.body;
+    const userId = getUserIdFromRequest(req);
 
-    if (!filename || !mimeType || !size) {
-      return res.status(400).json({ message: "Dados do arquivo ausentes" });
-    }
-
-    if (!allowedMimeTypes.includes(mimeType)) {
-      return res.status(400).json({ message: "Tipo de arquivo não permitido" });
-    }
-
-    if (size > MAX_FILE_SIZE) {
-      return res
-        .status(400)
-        .json({ message: "Tamanho máximo do arquivo excedido (50MB)" });
-    }
-
-    const userId = req.user!._id.toString();
-
-    const { v4: uuidv4 } = await import("uuid");
-    const uniqueKey = `${userId}/${uuidv4()}_${filename}`;
-
-    const command = new PutObjectCommand({
-      Bucket: "media-vault-83729",
-      Key: uniqueKey,
-      ContentType: mimeType,
+    const uploadPayload = await generateUploadUrlForUser({
+      filename,
+      mimeType,
+      size,
+      userId,
     });
 
-    const uploadUrl = await getSignedUrl(s3, command, {
-      expiresIn: 60, // 1 minute
-    });
-
-    // TODO FRONTEND - hit PUT in uploadURL, then POST /api/files with metadata to create record and update storage usage
-    res.status(200).json({
-      uploadUrl,
-      s3Key: uniqueKey,
-    });
+    res.status(200).json(uploadPayload);
   } catch (error) {
-    console.error(error);
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
     return res.status(500).json({
       message: "Erro ao gerar URL de upload",
-      error,
     });
   }
 };
