@@ -4,7 +4,10 @@ type FileItem = {
   mimeType: string;
 };
 
-export default function getFiles(setFiles: (files: FileItem[]) => void) {
+export default function getFiles(
+  setFiles: (files: FileItem[]) => void,
+  folderId?: string | null,
+) {
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   const token =
@@ -16,7 +19,12 @@ export default function getFiles(setFiles: (files: FileItem[]) => void) {
     return;
   }
 
-  fetch(`${API_BASE_URL}/api/files`, {
+  const folderQuery =
+    folderId === undefined
+      ? ""
+      : `?folderId=${encodeURIComponent(folderId === null ? "null" : folderId)}`;
+
+  fetch(`${API_BASE_URL}/api/files${folderQuery}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,

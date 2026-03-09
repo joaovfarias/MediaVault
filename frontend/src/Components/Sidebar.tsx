@@ -5,6 +5,7 @@ import { IoIosCloudOutline } from "react-icons/io";
 import { NavLink } from "react-router-dom";
 import NewUploadBar from "./NewUploadBar";
 import { useEffect, useRef, useState } from "react";
+import { IoStarOutline } from "react-icons/io5";
 
 export default function Sidebar() {
   const [isUploadBarVisible, setIsUploadBarVisible] = useState(false);
@@ -99,6 +100,19 @@ export default function Sidebar() {
               <div className="flex items-center">
                 <IoHomeOutline className="mr-2 w-4 h-4 text-[#000000]" />
                 <p className="text-sm font-light">Meus Arquivos</p>
+              </div>
+            </NavLink>
+          </li>
+          <li className="mb-4">
+            <NavLink
+              to="/favorites"
+              className={({ isActive }) =>
+                `block py-2 px-4 rounded hover:bg-[#e0f7fa] ${isActive ? "bg-[#e0f7fa]" : ""}`
+              }
+            >
+              <div className="flex items-center">
+                <IoStarOutline className="mr-2 w-4 h-4 text-[#000000]" />
+                <p className="text-sm font-light">Favoritos</p>
               </div>
             </NavLink>
           </li>

@@ -66,7 +66,7 @@ export default function FilePreview({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={() => setIsPreviewing(false)}
     >
-      <div>{renderPreview()}</div>
+      <div onClick={(e) => e.stopPropagation()}>{renderPreview()}</div>
     </div>
   );
 }

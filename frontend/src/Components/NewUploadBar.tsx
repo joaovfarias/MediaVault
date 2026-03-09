@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { MdOutlineUploadFile } from "react-icons/md";
 import { MdOutlineDriveFolderUpload } from "react-icons/md";
 import { Snackbar } from "@mui/material";
 import { getAuthToken } from "../utils/auth";
+import ChooseFolderNameDialog from "./ChooseFolderNameDialog";
+import { useParams } from "react-router-dom";
 
 type NewUploadBarProps = {
   isVisible: boolean;
@@ -23,11 +25,12 @@ const ALLOWED_EXTENSIONS = new Set(
 const ACCEPTED_FILE_TYPES = Object.keys(ALLOWED_MIME_TO_EXTENSION).join(",");
 
 export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
+  const { folderId } = useParams<{ folderId: string }>();
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [showChooseFolderName, setShowChooseFolderName] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const isAllowedFileType = (file: File) => {
     const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
@@ -53,8 +56,6 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
         }),
       },
     );
-
-    // UploadSingeFolder
 
     if (!uploadUrlResponse.ok) {
       const errorData = (await uploadUrlResponse.json().catch(() => null)) as {
@@ -92,6 +93,7 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
         s3Key,
         originalName,
         mimeType: file.type,
+        folderId: folderId ?? null,
       }),
     });
 
@@ -154,15 +156,6 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
     }
   };
 
-  useEffect(() => {
-    if (!folderInputRef.current) {
-      return;
-    }
-
-    folderInputRef.current.setAttribute("webkitdirectory", "");
-    folderInputRef.current.setAttribute("directory", "");
-  }, []);
-
   return (
     <>
       <div
@@ -177,14 +170,6 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
           accept={ACCEPTED_FILE_TYPES}
           onChange={handleInputChange}
         />
-        <input
-          ref={folderInputRef}
-          type="file"
-          className="hidden"
-          accept={ACCEPTED_FILE_TYPES}
-          multiple
-          onChange={handleInputChange}
-        />
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
@@ -197,7 +182,7 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
         </button>
         <button
           type="button"
-          onClick={() => folderInputRef.current?.click()}
+          onClick={() => setShowChooseFolderName(true)}
           className="w-full text-left px-3 py-2 rounded-lg text-sm text-[#444746] hover:bg-[#e0f7fa] hover:cursor-pointer"
         >
           <div className="flex items-center">
@@ -206,6 +191,14 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
           </div>
         </button>
       </div>
+
+      {showChooseFolderName && (
+        <ChooseFolderNameDialog
+          open={showChooseFolderName}
+          parentId={folderId ?? null}
+          onClose={() => setShowChooseFolderName(false)}
+        />
+      )}
 
       <Snackbar
         open={showSnackbar}

@@ -20,10 +20,13 @@ export const createFolder = async (
   return folder;
 };
 
-export const getUserFoldersFromRoot = async (userId: string) => {
+export const getUserFoldersFromRoot = async (
+  userId: string,
+  parentId?: string,
+) => {
   const folders = await Folder.find({
     owner: userId,
-    parentFolderId: null,
+    parentFolderId: parentId ?? null,
   });
   return folders;
 };
@@ -60,7 +63,30 @@ export const renameFolder = async ({
 };
 
 export const deleteFolder = async (folderId: string, ownerId: string) => {
-  const files = await Files.find({ parentFolderId: folderId });
+  const rootFolder = await Folder.findOne({ _id: folderId, owner: ownerId });
+  if (!rootFolder) {
+    throw new AppError("Pasta não encontrada", 404);
+  }
+
+  const folderIdsToDelete = [rootFolder._id.toString()];
+
+  for (let index = 0; index < folderIdsToDelete.length; index += 1) {
+    const currentFolderId = folderIdsToDelete[index];
+    const children = await Folder.find({
+      owner: ownerId,
+      parentFolderId: currentFolderId,
+    }).select("_id");
+
+    for (const child of children) {
+      folderIdsToDelete.push(child._id.toString());
+    }
+  }
+
+  const files = await Files.find({
+    owner: ownerId,
+    folderId: { $in: folderIdsToDelete },
+  });
+
   for (const file of files) {
     await deleteFileForUser({
       fileId: file._id.toString(),
@@ -68,14 +94,12 @@ export const deleteFolder = async (folderId: string, ownerId: string) => {
     });
   }
 
-  const folder = await Folder.findOneAndDelete({
-    _id: folderId,
+  await Folder.deleteMany({
     owner: ownerId,
+    _id: { $in: folderIdsToDelete },
   });
-  if (!folder) {
-    throw new AppError("Pasta não encontrada", 404);
-  }
-  return folder;
+
+  return rootFolder;
 };
 
 export const getFolderById = async (folderId: string, ownerId: string) => {
@@ -83,6 +107,21 @@ export const getFolderById = async (folderId: string, ownerId: string) => {
   if (!folder) {
     throw new AppError("Pasta não encontrada", 404);
   }
-  const files = await Files.find({ parentFolderId: folderId });
+  const files = await Files.find({ folderId, owner: ownerId });
   return { folder, files };
+};
+
+export const starFolderForUser = async (folderId: string, ownerId: string) => {
+  const folder = await Folder.findOne({ _id: folderId, owner: ownerId });
+  if (!folder) {
+    throw new AppError("Pasta não encontrada", 404);
+  }
+  folder.isStarred = !folder.isStarred;
+  await folder.save();
+  return folder;
+};
+
+export const getStarredFoldersForUser = async (ownerId: string) => {
+  const folders = await Folder.find({ owner: ownerId, isStarred: true });
+  return folders;
 };

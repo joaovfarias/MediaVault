@@ -8,6 +8,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3 } from "../config/s3";
 import File from "../models/File";
+import Folder from "../models/Folder";
 import User from "../models/User";
 import { AppError } from "./appError";
 
@@ -37,6 +38,7 @@ interface CreateFileRecordInput {
   originalName: string;
   mimeType: string;
   userId: string;
+  folderId?: string | null;
 }
 
 interface DownloadFileInput {
@@ -174,6 +176,7 @@ export const createFileRecordForUser = async ({
   originalName,
   mimeType,
   userId,
+  folderId,
 }: CreateFileRecordInput) => {
   if (!s3Key || !originalName || !mimeType) {
     throw new AppError("Dados do arquivo ausentes", 400);
@@ -219,12 +222,20 @@ export const createFileRecordForUser = async ({
     throw new AppError("Limite de armazenamento excedido", 400);
   }
 
+  if (folderId) {
+    const folder = await Folder.findOne({ _id: folderId, owner: userId });
+    if (!folder) {
+      throw new AppError("Pasta não encontrada", 404);
+    }
+  }
+
   const file = await File.create({
     owner: userId,
     originalName,
     s3Key,
     mimeType,
     size: fileSize,
+    folderId: folderId ?? null,
   });
 
   user.storageUsed += fileSize;
@@ -233,11 +244,21 @@ export const createFileRecordForUser = async ({
   return file;
 };
 
-export const getUserFilesList = async (userId: string, sortBySize: boolean) => {
-  if (sortBySize) {
-    return File.find({ owner: userId }).sort({ size: -1 });
+export const getUserFilesList = async (
+  userId: string,
+  sortBySize: boolean,
+  folderId?: string | null,
+) => {
+  const filter: { owner: string; folderId?: string | null } = { owner: userId };
+
+  if (folderId !== undefined) {
+    filter.folderId = folderId;
   }
-  return File.find({ owner: userId }).sort({ createdAt: -1 });
+
+  if (sortBySize) {
+    return File.find(filter).sort({ size: -1 });
+  }
+  return File.find(filter).sort({ createdAt: -1 });
 };
 
 export const getDownloadUrlForFile = async ({
@@ -283,4 +304,21 @@ export const deleteFileForUser = async ({
 
   await User.findByIdAndUpdate(userId, { $inc: { storageUsed: -file.size } });
   await file.deleteOne();
+};
+
+export const starFileForUser = async ({
+  fileId,
+  userId,
+}: {
+  fileId: string;
+  userId: string;
+}) => {
+  const file = await assertOwnedFile({ fileId, userId });
+  file.isStarred = !file.isStarred;
+  await file.save();
+  return file;
+};
+
+export const getStarredFilesForUser = async (userId: string) => {
+  return File.find({ owner: userId, isStarred: true }).sort({ createdAt: -1 });
 };

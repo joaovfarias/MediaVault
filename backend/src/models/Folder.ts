@@ -14,6 +14,7 @@ const folderSchema = new mongoose.Schema(
       ref: "Folder",
       default: null,
     },
+    isStarred: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

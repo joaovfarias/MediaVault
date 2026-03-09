@@ -12,6 +12,7 @@ import RegisterPage from "./pages/RegisterPage.tsx";
 import AuthLayout from "./layouts/AuthLayout.tsx";
 import ProtectedRoute from "./routes/ProtectedRoute.tsx";
 import PublicOnlyRoute from "./routes/PublicOnlyRoute.tsx";
+import StarredPage from "./pages/StarredPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -23,8 +24,10 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <HomePage /> },
           { path: "files", element: <MyFilesPage /> },
+          { path: "files/folder/:folderId", element: <MyFilesPage /> },
           { path: "trash", element: <TrashPage /> },
           { path: "storage", element: <StoragePage /> },
+          { path: "favorites", element: <StarredPage /> },
         ],
       },
     ],

@@ -6,6 +6,8 @@ import {
   getDownloadUrlForFile,
   getUserFilesList,
   renameFileForUser,
+  starFileForUser,
+  getStarredFilesForUser,
 } from "../services/file.service";
 import { AppError } from "../services/appError";
 
@@ -71,8 +73,15 @@ export const getUserFiles = async (req: Request, res: Response) => {
   try {
     const userId = getUserIdFromRequest(req);
     const sortBySize = req.query.sortBySize === "true";
+    const folderIdRaw = req.query.folderId;
+    const folderId =
+      typeof folderIdRaw === "string"
+        ? folderIdRaw === "null"
+          ? null
+          : folderIdRaw
+        : undefined;
 
-    const files = await getUserFilesList(userId, sortBySize);
+    const files = await getUserFilesList(userId, sortBySize, folderId);
 
     res.status(200).json(files);
   } catch (error) {
@@ -86,7 +95,12 @@ export const getUserFiles = async (req: Request, res: Response) => {
 
 export const createFileRecord = async (req: Request, res: Response) => {
   try {
-    const { s3Key, originalName, mimeType } = req.body;
+    const { s3Key, originalName, mimeType, folderId } = req.body as {
+      s3Key: string;
+      originalName: string;
+      mimeType: string;
+      folderId?: string | null;
+    };
     const userId = getUserIdFromRequest(req);
 
     const file = await createFileRecordForUser({
@@ -94,6 +108,7 @@ export const createFileRecord = async (req: Request, res: Response) => {
       originalName,
       mimeType,
       userId,
+      folderId,
     });
 
     res.status(201).json(file);
@@ -127,5 +142,42 @@ export const generateUploadUrl = async (req: Request, res: Response) => {
     return res.status(500).json({
       message: "Erro ao gerar URL de upload",
     });
+  }
+};
+
+export const starFile = async (req: Request, res: Response) => {
+  try {
+    const fileId = req.params.id;
+    const userId = getUserIdFromRequest(req);
+
+    const file = await starFileForUser({ fileId, userId });
+
+    res.status(200).json({
+      message: file.isStarred
+        ? "Arquivo marcado como favorito"
+        : "Arquivo desmarcado como favorito",
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+    res
+      .status(500)
+      .json({ message: "Erro ao marcar/desmarcar arquivo como favorito" });
+  }
+};
+
+export const getUserStarredFiles = async (req: Request, res: Response) => {
+  try {
+    const userId = getUserIdFromRequest(req);
+    const files = await getStarredFilesForUser(userId);
+    res.status(200).json(files);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+    res
+      .status(500)
+      .json({ message: "Erro ao buscar arquivos favoritos do usuário" });
   }
 };
