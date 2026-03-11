@@ -4,7 +4,6 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
 import App from "./App.tsx";
 import MyFilesPage from "./pages/MyFilesPage.tsx";
-import TrashPage from "./pages/TrashPage.tsx";
 import StoragePage from "./pages/StoragePage.tsx";
 import HomePage from "./pages/HomePage.tsx";
 import LoginPage from "./pages/LoginPage.tsx";
@@ -13,6 +12,8 @@ import AuthLayout from "./layouts/AuthLayout.tsx";
 import ProtectedRoute from "./routes/ProtectedRoute.tsx";
 import PublicOnlyRoute from "./routes/PublicOnlyRoute.tsx";
 import StarredPage from "./pages/StarredPage.tsx";
+import AdminDashboardPage from "./pages/AdminDashboardPage.tsx";
+import ProfilePage from "./pages/ProfilePage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -25,9 +26,10 @@ const router = createBrowserRouter([
           { index: true, element: <HomePage /> },
           { path: "files", element: <MyFilesPage /> },
           { path: "files/folder/:folderId", element: <MyFilesPage /> },
-          { path: "trash", element: <TrashPage /> },
           { path: "storage", element: <StoragePage /> },
           { path: "favorites", element: <StarredPage /> },
+          { path: "admin", element: <AdminDashboardPage /> },
+          { path: "profile", element: <ProfilePage /> },
         ],
       },
     ],

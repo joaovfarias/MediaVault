@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth.routes";
 import fileRoutes from "./routes/file.routes";
 import userRoutes from "./routes/user.routes";
 import folderRoutes from "./routes/folder.routes";
+import adminRoutes from "./routes/admin.routes";
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/folders", folderRoutes);
+app.use("/api/admin", adminRoutes);
 
 mongoose
   .connect(MONGO_URI)

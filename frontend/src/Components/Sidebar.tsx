@@ -1,6 +1,5 @@
 import { HiOutlinePlus } from "react-icons/hi2";
 import { IoHomeOutline } from "react-icons/io5";
-import { GoTrash } from "react-icons/go";
 import { IoIosCloudOutline } from "react-icons/io";
 import { NavLink } from "react-router-dom";
 import NewUploadBar from "./NewUploadBar";
@@ -113,19 +112,6 @@ export default function Sidebar() {
               <div className="flex items-center">
                 <IoStarOutline className="mr-2 w-4 h-4 text-[#000000]" />
                 <p className="text-sm font-light">Favoritos</p>
-              </div>
-            </NavLink>
-          </li>
-          <li className="mb-4">
-            <NavLink
-              to="/trash"
-              className={({ isActive }) =>
-                `block py-2 px-4 rounded hover:bg-[#e0f7fa] ${isActive ? "bg-[#e0f7fa]" : ""}`
-              }
-            >
-              <div className="flex items-center">
-                <GoTrash className="mr-2 w-4 h-4 text-[#000000]" />
-                <p className="text-sm font-light">Lixeira</p>
               </div>
             </NavLink>
           </li>

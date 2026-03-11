@@ -56,6 +56,7 @@ export default function LoginPage() {
             _id: string;
             username: string;
             email: string;
+            role: string;
           }) => {
             if (data.token) {
               localStorage.setItem("token", data.token);

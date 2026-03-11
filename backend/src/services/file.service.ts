@@ -239,6 +239,7 @@ export const createFileRecordForUser = async ({
   });
 
   user.storageUsed += fileSize;
+  user.fileCount += 1;
   await user.save();
 
   return file;
@@ -248,11 +249,17 @@ export const getUserFilesList = async (
   userId: string,
   sortBySize: boolean,
   folderId?: string | null,
+  mimeTypeFilter?: string,
 ) => {
-  const filter: { owner: string; folderId?: string | null } = { owner: userId };
+  const filter: { owner: string; folderId?: string | null; mimeType?: string } =
+    { owner: userId };
 
   if (folderId !== undefined) {
     filter.folderId = folderId;
+  }
+
+  if (mimeTypeFilter) {
+    filter.mimeType = mimeTypeFilter;
   }
 
   if (sortBySize) {
@@ -261,6 +268,12 @@ export const getUserFilesList = async (
 
   const files = await File.find(filter).sort({ createdAt: -1 });
 
+  return enrichFilesWithThumbnails(files);
+};
+
+export const enrichFilesWithThumbnails = async (
+  files: InstanceType<typeof File>[],
+) => {
   const results = await Promise.all(
     files.map(async (file) => {
       const thumbnailKey = `thumbnails/${file.s3Key}.jpg`;
@@ -350,6 +363,7 @@ export const deleteFileForUser = async ({
   );
 
   await User.findByIdAndUpdate(userId, { $inc: { storageUsed: -file.size } });
+  await User.findByIdAndUpdate(userId, { $inc: { fileCount: -1 } });
   await file.deleteOne();
 };
 

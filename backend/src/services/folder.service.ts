@@ -1,7 +1,7 @@
 import Folder from "../models/Folder";
 import Files from "../models/File";
 import { AppError } from "./appError";
-import { deleteFileForUser } from "./file.service";
+import { deleteFileForUser, enrichFilesWithThumbnails } from "./file.service";
 
 export const createFolder = async (
   userId: string,
@@ -107,7 +107,8 @@ export const getFolderById = async (folderId: string, ownerId: string) => {
   if (!folder) {
     throw new AppError("Pasta não encontrada", 404);
   }
-  const files = await Files.find({ folderId, owner: ownerId });
+  const rawFiles = await Files.find({ folderId, owner: ownerId });
+  const files = await enrichFilesWithThumbnails(rawFiles);
   return { folder, files };
 };
 

@@ -68,11 +68,12 @@ export const downloadFile = async (req: Request, res: Response) => {
   }
 };
 
-// TODO - add filtering by type, sort by date.
 export const getUserFiles = async (req: Request, res: Response) => {
   try {
     const userId = getUserIdFromRequest(req);
     const sortBySize = req.query.sortBySize === "true";
+    const mimeTypeFilter =
+      typeof req.query.mimeType === "string" ? req.query.mimeType : undefined;
     const folderIdRaw = req.query.folderId;
     const folderId =
       typeof folderIdRaw === "string"
@@ -81,7 +82,12 @@ export const getUserFiles = async (req: Request, res: Response) => {
           : folderIdRaw
         : undefined;
 
-    const files = await getUserFilesList(userId, sortBySize, folderId);
+    const files = await getUserFilesList(
+      userId,
+      sortBySize,
+      folderId,
+      mimeTypeFilter,
+    );
 
     res.status(200).json(files);
   } catch (error) {

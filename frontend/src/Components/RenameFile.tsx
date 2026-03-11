@@ -10,8 +10,14 @@ interface FileRenameProps {
   isEditingName: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+function removeExtension(filename: string) {
+  const lastDotIndex = filename.lastIndexOf(".");
+  if (lastDotIndex === -1) return filename;
+  return filename.substring(0, lastDotIndex);
+}
+
 export default function RenameFile({ file, isEditingName }: FileRenameProps) {
-  const [newName, setNewName] = useState("");
+  const [newName, setNewName] = useState(removeExtension(file.originalName));
 
   const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 

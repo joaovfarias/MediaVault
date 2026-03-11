@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 interface FilePreviewProps {
   file: {
     _id: string;
@@ -18,6 +20,18 @@ export default function FilePreview({
   const isImage = mimeType === "image/png" || mimeType === "image/jpeg";
   const isPdf = mimeType === "application/pdf";
   const isMp4 = mimeType === "video/mp4";
+  const isTxt = mimeType === "text/plain";
+
+  const [textContent, setTextContent] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isTxt && url) {
+      fetch(url)
+        .then((res) => res.text())
+        .then(setTextContent)
+        .catch(() => setTextContent(null));
+    }
+  }, [isTxt, url]);
 
   const renderPreview = () => {
     if (!url) {
@@ -56,14 +70,25 @@ export default function FilePreview({
       );
     }
 
+    if (isTxt) {
+      return (
+        <pre className="w-[90vw] max-w-5xl h-[85vh] overflow-auto rounded-lg bg-white p-6 text-sm text-gray-800 whitespace-pre-wrap">
+          {textContent ?? "Loading..."}
+        </pre>
+      );
+    }
+
+    // Unsupported type
     return (
-      <p className="text-white">This file type is not supported for preview.</p>
+      <p className="text-white">
+        Esse tipo de arquivo não é suportado para visualização.
+      </p>
     );
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
       onClick={() => setIsPreviewing(false)}
     >
       <div onClick={(e) => e.stopPropagation()}>{renderPreview()}</div>

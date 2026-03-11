@@ -7,6 +7,7 @@ export interface IUser extends Document {
   password: string;
   storageUsed: number;
   role: string;
+  fileCount: number;
   comparePassword(candidate: string): Promise<boolean>;
 }
 
@@ -17,6 +18,7 @@ const userSchema = new mongoose.Schema<IUser>(
     password: { type: String, required: true },
     storageUsed: { type: Number, default: 0 },
     role: { type: String, enum: ["user", "admin"], default: "user" },
+    fileCount: { type: Number, default: 0 },
   },
   { timestamps: true },
 );

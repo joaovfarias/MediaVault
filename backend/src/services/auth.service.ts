@@ -17,6 +17,7 @@ interface AuthResponse {
   _id: string;
   username: string;
   email: string;
+  role: string;
   token: string;
 }
 
@@ -49,6 +50,7 @@ export const registerUser = async ({
     _id: user._id.toString(),
     username: user.username,
     email: user.email,
+    role: user.role,
     token,
   };
 };
@@ -70,6 +72,7 @@ export const loginUser = async ({ email, password }: LoginInput) => {
     _id: user._id.toString(),
     username: user.username,
     email: user.email,
+    role: user.role,
     token,
   };
 };

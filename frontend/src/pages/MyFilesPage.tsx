@@ -23,6 +23,8 @@ export default function MyFilesPage() {
   const { folderId } = useParams<{ folderId: string }>();
   const [files, setFiles] = useState<File[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -34,8 +36,12 @@ export default function MyFilesPage() {
 
   useEffect(() => {
     const refreshData = () => {
+      setLoading(true);
       if (!folderId) {
-        getFiles(setFiles, null);
+        getFiles((f) => {
+          setFiles(f);
+          setLoading(false);
+        }, null);
         getFolders(setFolders);
         return;
       }
@@ -64,7 +70,8 @@ export default function MyFilesPage() {
         })
         .catch(() => {
           setFiles([]);
-        });
+        })
+        .finally(() => setLoading(false));
 
       getFolders(setFolders, folderId);
     };
@@ -79,14 +86,52 @@ export default function MyFilesPage() {
     };
   }, [folderId, API_BASE_URL]);
 
+  const filterOptions = [
+    { label: "Todos", value: null },
+    { label: "Imagens", value: "image" },
+    { label: "PDF", value: "application/pdf" },
+    { label: "Vídeos", value: "video/mp4" },
+    { label: "Texto", value: "text/plain" },
+  ];
+
+  const filteredFiles = typeFilter
+    ? files.filter((f) => f.mimeType.startsWith(typeFilter))
+    : files;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <span className="text-gray-500 text-lg">Carregando...</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-10 ml-5 mt-5 pr-10">
-      {files.map((file: File) => (
-        <FileComponent key={file._id} file={file} />
-      ))}
-      {folders.map((folder: Folder) => (
-        <FolderComponent key={folder._id} folder={folder} />
-      ))}
+    <div>
+      <div className="flex gap-2 ml-5 mt-4 mb-2 flex-wrap">
+        {filterOptions.map((opt) => (
+          <button
+            key={opt.label}
+            onClick={() => setTypeFilter(opt.value)}
+            className={`px-3 py-1 rounded-full text-sm border transition-colors ${
+              typeFilter === opt.value
+                ? "bg-[#006D7A] text-white border-[#006D7A]"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-10 ml-5 mt-5 pr-10">
+        {filteredFiles.map((file: File) => (
+          <FileComponent key={file._id} file={file} />
+        ))}
+        {!typeFilter &&
+          folders.map((folder: Folder) => (
+            <FolderComponent key={folder._id} folder={folder} />
+          ))}
+      </div>
     </div>
   );
 }
