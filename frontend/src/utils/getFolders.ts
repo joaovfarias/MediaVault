@@ -1,6 +1,7 @@
 type FolderItem = {
   _id: string;
   name: string;
+  isStarred: boolean;
 };
 
 export default function getFolders(

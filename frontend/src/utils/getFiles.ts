@@ -2,6 +2,8 @@ type FileItem = {
   _id: string;
   originalName: string;
   mimeType: string;
+  isStarred: boolean;
+  thumbnailUrl: string | null;
 };
 
 export default function getFiles(

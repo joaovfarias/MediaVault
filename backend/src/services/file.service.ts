@@ -258,7 +258,47 @@ export const getUserFilesList = async (
   if (sortBySize) {
     return File.find(filter).sort({ size: -1 });
   }
-  return File.find(filter).sort({ createdAt: -1 });
+
+  const files = await File.find(filter).sort({ createdAt: -1 });
+
+  const results = await Promise.all(
+    files.map(async (file) => {
+      const thumbnailKey = `thumbnails/${file.s3Key}.jpg`;
+
+      const thumbnailExists = await s3
+        .send(
+          new HeadObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: thumbnailKey,
+          }),
+        )
+        .then(() => true)
+        .catch(() => false);
+
+      if (!thumbnailExists) {
+        return {
+          ...file.toObject(),
+          thumbnailUrl: null,
+        };
+      }
+
+      const command = new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: thumbnailKey,
+      });
+
+      const thumbnailUrl = await getSignedUrl(s3, command, {
+        expiresIn: 60,
+      }).catch(() => null);
+
+      return {
+        ...file.toObject(),
+        thumbnailUrl,
+      };
+    }),
+  );
+
+  return results;
 };
 
 export const getDownloadUrlForFile = async ({
@@ -302,6 +342,13 @@ export const deleteFileForUser = async ({
     }),
   );
 
+  await s3.send(
+    new DeleteObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: `thumbnails/${file.s3Key}.jpg`,
+    }),
+  );
+
   await User.findByIdAndUpdate(userId, { $inc: { storageUsed: -file.size } });
   await file.deleteOne();
 };
@@ -320,5 +367,46 @@ export const starFileForUser = async ({
 };
 
 export const getStarredFilesForUser = async (userId: string) => {
-  return File.find({ owner: userId, isStarred: true }).sort({ createdAt: -1 });
+  const files = await File.find({ owner: userId, isStarred: true }).sort({
+    createdAt: -1,
+  });
+
+  const results = await Promise.all(
+    files.map(async (file) => {
+      const thumbnailKey = `thumbnails/${file.s3Key}.jpg`;
+
+      const thumbnailExists = await s3
+        .send(
+          new HeadObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: thumbnailKey,
+          }),
+        )
+        .then(() => true)
+        .catch(() => false);
+
+      if (!thumbnailExists) {
+        return {
+          ...file.toObject(),
+          thumbnailUrl: null,
+        };
+      }
+
+      const thumbnailUrl = await getSignedUrl(
+        s3,
+        new GetObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: thumbnailKey,
+        }),
+        { expiresIn: 60 },
+      ).catch(() => null);
+
+      return {
+        ...file.toObject(),
+        thumbnailUrl,
+      };
+    }),
+  );
+
+  return results;
 };

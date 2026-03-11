@@ -24,8 +24,16 @@ const ALLOWED_EXTENSIONS = new Set(
 );
 const ACCEPTED_FILE_TYPES = Object.keys(ALLOWED_MIME_TO_EXTENSION).join(",");
 
+type UploadedFileRecord = {
+  _id: string;
+  thumbnailUrl?: string | null;
+};
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
   const { folderId } = useParams<{ folderId: string }>();
+  const [isUploading, setIsUploading] = useState(false);
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [showChooseFolderName, setShowChooseFolderName] = useState(false);
@@ -38,6 +46,40 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
     const hasAllowedExtension = ALLOWED_EXTENSIONS.has(extension);
 
     return hasAllowedMime || hasAllowedExtension;
+  };
+
+  const waitForThumbnailsReady = async (
+    token: string,
+    uploadedIds: string[],
+  ) => {
+    const maxAttempts = 10;
+    const delayMs = 1000;
+    const folderQuery = `?folderId=${encodeURIComponent(folderId ?? "null")}`;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const response = await fetch(`${API_BASE_URL}/api/files${folderQuery}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }).catch(() => null);
+
+      if (response?.ok) {
+        const data = (await response.json()) as UploadedFileRecord[];
+        const allReady = uploadedIds.every((uploadedId) =>
+          data.some(
+            (fileRecord) =>
+              fileRecord._id === uploadedId && Boolean(fileRecord.thumbnailUrl),
+          ),
+        );
+
+        if (allReady) {
+          return;
+        }
+      }
+
+      await sleep(delayMs);
+    }
   };
 
   const uploadSingleFile = async (file: File, token: string) => {
@@ -105,6 +147,16 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
       } | null;
       throw new Error(errorData?.message ?? "Failed to save file record");
     }
+
+    const createdRecord = (await createRecordResponse
+      .json()
+      .catch(() => null)) as UploadedFileRecord | null;
+
+    if (!createdRecord?._id) {
+      throw new Error("Upload finished but file record id was not returned");
+    }
+
+    return createdRecord._id;
   };
 
   const handleInputChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -142,7 +194,11 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
     }
 
     try {
-      await Promise.all(files.map((file) => uploadSingleFile(file, token)));
+      setIsUploading(true);
+      const uploadedIds = await Promise.all(
+        files.map((file) => uploadSingleFile(file, token)),
+      );
+      await waitForThumbnailsReady(token, uploadedIds);
       window.dispatchEvent(new Event("files:updated"));
       setSnackbarMessage("Upload concluído com sucesso.");
       setShowSnackbar(true);
@@ -152,6 +208,7 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
       setSnackbarMessage(message);
       setShowSnackbar(true);
     } finally {
+      setIsUploading(false);
       event.target.value = "";
     }
   };
@@ -199,6 +256,12 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
           onClose={() => setShowChooseFolderName(false)}
         />
       )}
+
+      <Snackbar
+        open={isUploading}
+        message="Fazendo upload, por favor aguarde..."
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      />
 
       <Snackbar
         open={showSnackbar}

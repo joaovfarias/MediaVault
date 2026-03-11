@@ -5,12 +5,24 @@ import getFiles from "../utils/getFiles";
 import getFolders from "../utils/getFolders";
 import { useParams } from "react-router-dom";
 
+interface File {
+  _id: string;
+  originalName: string;
+  mimeType: string;
+  isStarred: boolean;
+  thumbnailUrl: string | null;
+}
+
+interface Folder {
+  _id: string;
+  name: string;
+  isStarred: boolean;
+}
+
 export default function MyFilesPage() {
   const { folderId } = useParams<{ folderId: string }>();
-  const [files, setFiles] = useState<
-    { _id: string; originalName: string; mimeType: string }[]
-  >([]);
-  const [folders, setFolders] = useState<{ _id: string; name: string }[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -47,13 +59,9 @@ export default function MyFilesPage() {
           }
           return response.json();
         })
-        .then(
-          (data: {
-            files?: { _id: string; originalName: string; mimeType: string }[];
-          }) => {
-            setFiles(data.files ?? []);
-          },
-        )
+        .then((data: { files?: File[] }) => {
+          setFiles(data.files ?? []);
+        })
         .catch(() => {
           setFiles([]);
         });
@@ -73,12 +81,10 @@ export default function MyFilesPage() {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-10 ml-5 mt-5 pr-10">
-      {files.map(
-        (file: { _id: string; originalName: string; mimeType: string }) => (
-          <FileComponent key={file._id} file={file} />
-        ),
-      )}
-      {folders.map((folder: { _id: string; name: string }) => (
+      {files.map((file: File) => (
+        <FileComponent key={file._id} file={file} />
+      ))}
+      {folders.map((folder: Folder) => (
         <FolderComponent key={folder._id} folder={folder} />
       ))}
     </div>

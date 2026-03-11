@@ -7,6 +7,7 @@ interface StarredFile {
   originalName: string;
   mimeType: string;
   isStarred: boolean;
+  thumbnailUrl: string | null;
 }
 
 interface StarredFolder {

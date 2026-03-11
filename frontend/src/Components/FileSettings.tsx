@@ -195,7 +195,7 @@ export default function FileSettings({
       )}
       <div
         ref={menuContainerRef}
-        className="absolute right-1 top-1/2 -translate-y-1/2 z-20"
+        className="absolute right-0 top-1/2 -translate-y-1/2 z-20"
         onClick={(event) => event.stopPropagation()}
       >
         {isMenuVisible && (
@@ -259,7 +259,7 @@ export default function FileSettings({
           </div>
         )}
         <div
-          className="p-2 rounded-full hover:bg-gray-200"
+          className="p-2 rounded-full transition-all duration-200 ease-out hover:bg-gray-300 hover:scale-105"
           onClick={(e) => {
             e.stopPropagation();
             toggleMenu();

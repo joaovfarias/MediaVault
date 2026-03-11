@@ -14,7 +14,13 @@ import FileSettings from "./FileSettings";
 export default function FileComponent({
   file,
 }: {
-  file: { _id: string; originalName: string; mimeType: string };
+  file: {
+    _id: string;
+    originalName: string;
+    mimeType: string;
+    isStarred: boolean;
+    thumbnailUrl: string | null;
+  };
 }) {
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -76,10 +82,10 @@ export default function FileComponent({
 
       <div className="relative w-fit">
         <div
-          className="relative flex flex-col text-black bg-[#f0f4f9] p-4 rounded-xl w-55 h-16 hover:bg-[#e0e8f1] cursor-pointer"
+          className="relative flex flex-col text-black bg-[#f0f4f9] p-4 rounded-xl w-55 hover:bg-[#e0e8f1] cursor-pointer"
           onClick={handlePreviewFile}
         >
-          <div className="flex-1 flex items-center justify-start gap-2 pr-8">
+          <div className="relative flex items-center justify-start gap-2 pr-12">
             {file.mimeType === "application/pdf" && (
               <BiSolidFilePdf className="text-3xl text-[#ea4335]" />
             )}
@@ -101,10 +107,18 @@ export default function FileComponent({
                 (file as { originalName: string }).originalName,
               )}
             </span>
+
+            <FileSettings file={file} />
+          </div>
+
+          <div className="mt-4 w-full h-36 overflow-hidden rounded-lg bg-[#dfe6ee]">
+            <img
+              src={file.thumbnailUrl || undefined}
+              alt="Thumbnail"
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
-
-        <FileSettings file={file} />
       </div>
 
       <Snackbar

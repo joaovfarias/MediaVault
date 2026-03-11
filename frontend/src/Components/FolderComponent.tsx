@@ -3,9 +3,9 @@ import FolderSettings from "./FolderSettings";
 import { useNavigate } from "react-router-dom";
 
 export default function FolderComponent({
-  folder = { name: "New Folder" },
+  folder = { name: "New Folder", isStarred: false },
 }: {
-  folder?: { _id?: string; name: string };
+  folder?: { _id?: string; name: string; isStarred: boolean };
 }) {
   const navigate = useNavigate();
 
@@ -29,9 +29,8 @@ export default function FolderComponent({
             {folder.name}
           </span>
         </div>
+        <FolderSettings folder={folder} />
       </div>
-
-      <FolderSettings folder={folder} />
     </div>
   );
 }
