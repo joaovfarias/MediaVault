@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import getFiles from "../utils/getFiles";
 import getFolders from "../utils/getFolders";
 import { useParams } from "react-router-dom";
+import { useFileSystem } from "../contexts/FileSystemContext";
 
 interface File {
   _id: string;
@@ -25,6 +26,7 @@ export default function MyFilesPage() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { setFilesAddedHandler, setFolderAddedHandler } = useFileSystem();
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -77,14 +79,23 @@ export default function MyFilesPage() {
     };
 
     refreshData();
-    window.addEventListener("files:updated", refreshData);
-    window.addEventListener("folders:updated", refreshData);
+
+    return () => {};
+  }, [folderId, API_BASE_URL]);
+
+  useEffect(() => {
+    setFilesAddedHandler((newFiles) => {
+      setFiles((prev) => [...prev, ...newFiles]);
+    });
+    setFolderAddedHandler((newFolder) => {
+      setFolders((prev) => [...prev, newFolder]);
+    });
 
     return () => {
-      window.removeEventListener("files:updated", refreshData);
-      window.removeEventListener("folders:updated", refreshData);
+      setFilesAddedHandler(null);
+      setFolderAddedHandler(null);
     };
-  }, [folderId, API_BASE_URL]);
+  }, [setFilesAddedHandler, setFolderAddedHandler]);
 
   const filterOptions = [
     { label: "Todos", value: null },
@@ -125,11 +136,39 @@ export default function MyFilesPage() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-10 ml-5 mt-5 pr-10">
         {filteredFiles.map((file: File) => (
-          <FileComponent key={file._id} file={file} />
+          <FileComponent
+            key={file._id}
+            file={file}
+            variant="MyFilesPage"
+            onDelete={(fileId) =>
+              setFiles((prev) => prev.filter((f) => f._id !== fileId))
+            }
+            onRename={(fileId, newName) =>
+              setFiles((prev) =>
+                prev.map((f) =>
+                  f._id === fileId ? { ...f, originalName: newName } : f,
+                ),
+              )
+            }
+          />
         ))}
         {!typeFilter &&
           folders.map((folder: Folder) => (
-            <FolderComponent key={folder._id} folder={folder} />
+            <FolderComponent
+              key={folder._id}
+              folder={folder}
+              variant="MyFilesPage"
+              onDelete={(folderId) =>
+                setFolders((prev) => prev.filter((fo) => fo._id !== folderId))
+              }
+              onRename={(folderId, newName) =>
+                setFolders((prev) =>
+                  prev.map((fo) =>
+                    fo._id === folderId ? { ...fo, name: newName } : fo,
+                  ),
+                )
+              }
+            />
           ))}
       </div>
     </div>

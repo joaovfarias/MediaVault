@@ -8,11 +8,11 @@ import {
   InputLabel,
   OutlinedInput,
   TextField,
-  Snackbar,
 } from "@mui/material";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Visibility from "@mui/icons-material/Visibility";
 import { useNavigate } from "react-router-dom";
+import FeedbackComponent from "../Components/FeedbackComponent";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -298,11 +298,11 @@ export default function RegisterPage() {
         </a>
       </p>
 
-      <Snackbar
-        open={showErrorSnackbar}
-        autoHideDuration={6000}
-        onClose={() => setShowErrorSnackbar(false)}
+      <FeedbackComponent
         message={erroMessage}
+        severity="error"
+        open={showErrorSnackbar}
+        handleClose={() => setShowErrorSnackbar(false)}
       />
     </div>
   );

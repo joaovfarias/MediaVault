@@ -2,10 +2,11 @@ import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { MdOutlineUploadFile } from "react-icons/md";
 import { MdOutlineDriveFolderUpload } from "react-icons/md";
-import { Snackbar } from "@mui/material";
+import FeedbackComponent from "./FeedbackComponent";
 import { getAuthToken } from "../utils/auth";
 import ChooseFolderNameDialog from "./ChooseFolderNameDialog";
 import { useParams } from "react-router-dom";
+import { useFileSystem } from "../contexts/FileSystemContext";
 
 type NewUploadBarProps = {
   isVisible: boolean;
@@ -26,16 +27,23 @@ const ACCEPTED_FILE_TYPES = Object.keys(ALLOWED_MIME_TO_EXTENSION).join(",");
 
 type UploadedFileRecord = {
   _id: string;
-  thumbnailUrl?: string | null;
+  originalName: string;
+  mimeType: string;
+  isStarred: boolean;
+  thumbnailUrl: string | null;
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
   const { folderId } = useParams<{ folderId: string }>();
+  const { notifyFilesAdded } = useFileSystem();
   const [isUploading, setIsUploading] = useState(false);
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<
+    "success" | "error" | "warning" | "info"
+  >("error");
   const [showChooseFolderName, setShowChooseFolderName] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +59,7 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
   const waitForThumbnailsReady = async (
     token: string,
     uploadedIds: string[],
-  ) => {
+  ): Promise<UploadedFileRecord[]> => {
     const maxAttempts = 10;
     const delayMs = 1000;
     const folderQuery = `?folderId=${encodeURIComponent(folderId ?? "null")}`;
@@ -66,20 +74,25 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
 
       if (response?.ok) {
         const data = (await response.json()) as UploadedFileRecord[];
+        const uploadedRecords = data.filter((fileRecord) =>
+          uploadedIds.includes(fileRecord._id),
+        );
         const allReady = uploadedIds.every((uploadedId) =>
-          data.some(
+          uploadedRecords.some(
             (fileRecord) =>
               fileRecord._id === uploadedId && Boolean(fileRecord.thumbnailUrl),
           ),
         );
 
         if (allReady) {
-          return;
+          return uploadedRecords;
         }
       }
 
       await sleep(delayMs);
     }
+
+    return [];
   };
 
   const uploadSingleFile = async (file: File, token: string) => {
@@ -167,6 +180,7 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
 
     const token = getAuthToken();
     if (!token) {
+      setSnackbarSeverity("error");
       setSnackbarMessage(
         "Você precisa estar autenticado para enviar arquivos.",
       );
@@ -184,6 +198,7 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
         .join(", ");
       const invalidNames = invalidFiles.map((file) => file.name).join(", ");
 
+      setSnackbarSeverity("warning");
       setSnackbarMessage(
         `Alguns arquivos não são permitidos: ${invalidNames}. Tipos aceitos: ${allowed}`,
       );
@@ -198,13 +213,15 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
       const uploadedIds = await Promise.all(
         files.map((file) => uploadSingleFile(file, token)),
       );
-      await waitForThumbnailsReady(token, uploadedIds);
-      window.dispatchEvent(new Event("files:updated"));
+      const uploadedFiles = await waitForThumbnailsReady(token, uploadedIds);
+      notifyFilesAdded(uploadedFiles);
+      setSnackbarSeverity("success");
       setSnackbarMessage("Upload concluído com sucesso.");
       setShowSnackbar(true);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Erro ao enviar arquivos.";
+      setSnackbarSeverity("error");
       setSnackbarMessage(message);
       setShowSnackbar(true);
     } finally {
@@ -257,18 +274,18 @@ export default function NewUploadBar({ isVisible }: NewUploadBarProps) {
         />
       )}
 
-      <Snackbar
-        open={isUploading}
+      <FeedbackComponent
         message="Fazendo upload, por favor aguarde..."
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        severity="info"
+        open={isUploading}
+        handleClose={() => {}}
       />
 
-      <Snackbar
-        open={showSnackbar}
-        autoHideDuration={6000}
-        onClose={() => setShowSnackbar(false)}
+      <FeedbackComponent
         message={snackbarMessage}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        severity={snackbarSeverity}
+        open={showSnackbar}
+        handleClose={() => setShowSnackbar(false)}
       />
     </>
   );

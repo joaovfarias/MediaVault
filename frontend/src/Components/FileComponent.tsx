@@ -6,13 +6,17 @@ import { BiSolidFileJpg } from "react-icons/bi";
 import { BiSolidFilePng } from "react-icons/bi";
 import { BsFiletypeMp4 } from "react-icons/bs";
 
-import { Snackbar } from "@mui/material";
+import FeedbackComponent from "./FeedbackComponent";
 
 import FilePreview from "./FilePreview";
 import FileSettings from "./FileSettings";
 
 export default function FileComponent({
   file,
+  variant,
+  onUnstar,
+  onDelete,
+  onRename,
 }: {
   file: {
     _id: string;
@@ -21,6 +25,10 @@ export default function FileComponent({
     isStarred: boolean;
     thumbnailUrl: string | null;
   };
+  variant?: string;
+  onUnstar?: (fileId: string) => void;
+  onDelete?: (fileId: string) => void;
+  onRename?: (fileId: string, newName: string) => void;
 }) {
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -108,7 +116,13 @@ export default function FileComponent({
               )}
             </span>
 
-            <FileSettings file={file} />
+            <FileSettings
+              file={file}
+              variant={variant}
+              onUnstar={onUnstar}
+              onDelete={onDelete}
+              onRename={onRename}
+            />
           </div>
 
           <div className="mt-4 w-full h-36 overflow-hidden rounded-lg bg-[#dfe6ee]">
@@ -121,12 +135,11 @@ export default function FileComponent({
         </div>
       </div>
 
-      <Snackbar
-        open={showSnackbar}
-        autoHideDuration={6000}
-        onClose={() => setShowSnackbar(false)}
+      <FeedbackComponent
         message={snackbarMessage}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        severity="error"
+        open={showSnackbar}
+        handleClose={() => setShowSnackbar(false)}
       />
     </>
   );

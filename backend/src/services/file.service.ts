@@ -424,3 +424,23 @@ export const getStarredFilesForUser = async (userId: string) => {
 
   return results;
 };
+
+export const deleteAllFilesForUser = async (userId: string) => {
+  const files = await File.find({ owner: userId });
+  for (const file of files) {
+    await s3.send(
+      new DeleteObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: file.s3Key,
+      }),
+    );
+    await s3.send(
+      new DeleteObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: `thumbnails/${file.s3Key}.jpg`,
+      }),
+    );
+
+    await file.deleteOne();
+  }
+};

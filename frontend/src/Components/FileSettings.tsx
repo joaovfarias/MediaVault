@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { Snackbar } from "@mui/material";
 import { MdOutlineDriveFileRenameOutline } from "react-icons/md";
 import { MdOutlineFileDownload } from "react-icons/md";
 import { HiOutlineTrash } from "react-icons/hi2";
@@ -8,9 +7,14 @@ import { getAuthToken } from "../utils/auth";
 import RenameFile from "./RenameFile";
 import { IoStarOutline } from "react-icons/io5";
 import { IoStar } from "react-icons/io5";
+import FeedbackComponent from "./FeedbackComponent";
 
 export default function FileSettings({
   file,
+  variant,
+  onUnstar,
+  onDelete,
+  onRename,
 }: {
   file: {
     _id: string;
@@ -18,13 +22,21 @@ export default function FileSettings({
     mimeType: string;
     isStarred: boolean;
   };
+  variant?: string;
+  onUnstar?: (fileId: string) => void;
+  onDelete?: (fileId: string) => void;
+  onRename?: (fileId: string, newName: string) => void;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const closeTimeoutRef = useRef<number | null>(null);
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
+    "error",
+  );
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isStarred, setIsStarred] = useState(file.isStarred);
   const menuContainerRef = useRef<HTMLDivElement>(null);
 
   const animationDuration = 200;
@@ -140,7 +152,8 @@ export default function FileSettings({
     if (deleteFileResponse.ok) {
       setSnackbarMessage("Arquivo deletado com sucesso");
       setShowSnackbar(true);
-      window.dispatchEvent(new CustomEvent("files:updated"));
+      setSnackbarSeverity("success");
+      onDelete?.(file._id);
     } else {
       const errorData = (await deleteFileResponse.json().catch(() => null)) as {
         message?: string;
@@ -170,14 +183,29 @@ export default function FileSettings({
     );
 
     if (starFileResponse.ok) {
-      if (file.isStarred) {
-        setSnackbarMessage("Arquivo desfavoritado com sucesso");
-        window.dispatchEvent(new CustomEvent("files:updated"));
-        setShowSnackbar(true);
+      if (variant !== "MyFilesPage") {
+        // Starred Page
+        if (isStarred) {
+          setSnackbarMessage("Arquivo desfavoritado com sucesso");
+          setShowSnackbar(true);
+          setSnackbarSeverity("success");
+          if (onUnstar) {
+            onUnstar(file._id);
+          }
+        }
+        // We are on MyFilesPage, we can do a client side update to avoid refetching all files
       } else {
-        setSnackbarMessage("Arquivo favoritado com sucesso");
-        setShowSnackbar(true);
-        window.dispatchEvent(new CustomEvent("files:updated"));
+        if (isStarred) {
+          setSnackbarMessage("Arquivo desfavoritado com sucesso");
+          setShowSnackbar(true);
+          setSnackbarSeverity("success");
+          setIsStarred(false);
+        } else {
+          setSnackbarMessage("Arquivo favoritado com sucesso");
+          setShowSnackbar(true);
+          setSnackbarSeverity("success");
+          setIsStarred(true);
+        }
       }
     } else {
       const errorData = (await starFileResponse.json().catch(() => null)) as {
@@ -191,11 +219,15 @@ export default function FileSettings({
   return (
     <>
       {isEditingName && (
-        <RenameFile file={file} isEditingName={setIsEditingName} />
+        <RenameFile
+          file={file}
+          isEditingName={setIsEditingName}
+          onRename={onRename}
+        />
       )}
       <div
         ref={menuContainerRef}
-        className="absolute right-0 top-1/2 -translate-y-1/2 z-20"
+        className="absolute right-0 top-1/2 -translate-y-1/2 z-5"
         onClick={(event) => event.stopPropagation()}
       >
         {isMenuVisible && (
@@ -210,7 +242,7 @@ export default function FileSettings({
               onClick={(event) => {
                 event.stopPropagation();
                 handleDownloadFile();
-                setIsMenuVisible(false);
+                closeMenu();
               }}
             >
               <MdOutlineFileDownload className="text-lg text-[#444746] hover:text-[#0d47a1] cursor-pointer w-4 h-4 shrink-0" />
@@ -222,7 +254,7 @@ export default function FileSettings({
               onClick={(event) => {
                 event.stopPropagation();
                 setIsEditingName(true);
-                setIsMenuVisible(false);
+                closeMenu();
               }}
             >
               <MdOutlineDriveFileRenameOutline className="text-lg text-[#444746] hover:text-[#0d47a1] cursor-pointer w-4 h-4 shrink-0" />
@@ -234,15 +266,15 @@ export default function FileSettings({
               onClick={(event) => {
                 event.stopPropagation();
                 handleStarFile(token, file._id);
-                setIsMenuVisible(false);
+                closeMenu();
               }}
             >
-              {file.isStarred ? (
+              {isStarred ? (
                 <IoStar className="text-lg text-[#444746] hover:text-[#0d47a1] cursor-pointer w-4 h-4 shrink-0" />
               ) : (
                 <IoStarOutline className="text-lg text-[#444746] hover:text-[#0d47a1] cursor-pointer w-4 h-4 shrink-0" />
               )}
-              {file.isStarred ? "Desfavoritar" : "Favoritar"}
+              {isStarred ? "Desfavoritar" : "Favoritar"}
             </button>
             <button
               type="button"
@@ -250,7 +282,7 @@ export default function FileSettings({
               onClick={(event) => {
                 event.stopPropagation();
                 handleDeleteFile(token, file._id);
-                setIsMenuVisible(false);
+                closeMenu();
               }}
             >
               <HiOutlineTrash className="text-lg text-[#444746] hover:text-[#0d47a1] cursor-pointer w-4 h-4 shrink-0" />
@@ -269,13 +301,14 @@ export default function FileSettings({
         </div>
       </div>
 
-      <Snackbar
-        open={showSnackbar}
-        autoHideDuration={6000}
-        onClose={() => setShowSnackbar(false)}
-        message={snackbarMessage}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      />
+      {showSnackbar && (
+        <FeedbackComponent
+          message={snackbarMessage}
+          severity={snackbarSeverity}
+          open={showSnackbar}
+          handleClose={() => setShowSnackbar(false)}
+        />
+      )}
     </>
   );
 }

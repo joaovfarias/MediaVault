@@ -5,7 +5,7 @@ import { BsFiletypeMp4 } from "react-icons/bs";
 import { BiSolidFilePdf } from "react-icons/bi";
 import { useState } from "react";
 import FilePreview from "./FilePreview";
-import { Snackbar } from "@mui/material";
+import FeedbackComponent from "./FeedbackComponent";
 
 interface File {
   _id: string;
@@ -90,12 +90,11 @@ export default function StorageComponent({ file }: { file: File }) {
         />
       )}
 
-      <Snackbar
-        open={showSnackbar}
-        autoHideDuration={3000}
-        onClose={() => setShowSnackbar(false)}
+      <FeedbackComponent
         message={snackbarMessage}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        severity="error"
+        open={showSnackbar}
+        handleClose={() => setShowSnackbar(false)}
       />
     </>
   );

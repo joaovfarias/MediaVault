@@ -126,3 +126,14 @@ export const getStarredFolders = async (req: Request, res: Response) => {
     }
   }
 };
+
+export const deleteAllFoldersForUser = async (userId: string) => {
+  try {
+    const folders = await getUserFoldersFromRoot(userId);
+    for (const folder of folders) {
+      await deleteFolder(folder._id.toString(), userId);
+    }
+  } catch (error) {
+    console.error("Erro ao deletar pastas do usuário:", error);
+  }
+};

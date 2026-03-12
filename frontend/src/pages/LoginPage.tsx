@@ -6,12 +6,12 @@ import {
   InputAdornment,
   InputLabel,
   OutlinedInput,
-  Snackbar,
   TextField,
 } from "@mui/material";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Visibility from "@mui/icons-material/Visibility";
 import { useNavigate } from "react-router-dom";
+import FeedbackComponent from "../Components/FeedbackComponent";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -184,11 +184,11 @@ export default function LoginPage() {
         </a>
       </p>
 
-      <Snackbar
-        open={showErrorSnackbar}
-        autoHideDuration={6000}
-        onClose={() => setShowErrorSnackbar(false)}
+      <FeedbackComponent
         message={erroMessage}
+        severity="error"
+        open={showErrorSnackbar}
+        handleClose={() => setShowErrorSnackbar(false)}
       />
     </div>
   );

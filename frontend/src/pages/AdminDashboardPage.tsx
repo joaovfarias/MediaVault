@@ -40,6 +40,29 @@ export default function AdminDashboardPage() {
     fetchDashboard();
   }, [API_BASE_URL, token]);
 
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Tem certeza que deseja deletar este usuário?")) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/users/${userId}/delete`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          method: "DELETE",
+        },
+      );
+
+      if (!response.ok) throw new Error("Failed to delete user");
+
+      setUsers((prev) => prev.filter((u) => u._id !== userId));
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      alert("Erro ao deletar usuário. Tente novamente.");
+    }
+  };
+
   const formatStorage = (bytes: number) => {
     if (bytes === 0) return "0 B";
     if (bytes < 1024) return `${bytes} B`;
@@ -90,6 +113,9 @@ export default function AdminDashboardPage() {
               <th className="py-3 text-sm font-medium text-zinc-700">Email</th>
               <th className="py-3 text-sm font-medium text-zinc-700">Cargo</th>
               <th className="py-3 text-sm font-medium text-zinc-700 text-right">
+                Ações
+              </th>
+              <th className="py-3 text-sm font-medium text-zinc-700 text-right">
                 Armazenamento Usado
               </th>
             </tr>
@@ -112,6 +138,15 @@ export default function AdminDashboardPage() {
                   >
                     {user.role === "admin" ? "Admin" : "Usuário"}
                   </span>
+                </td>
+                <td className="py-3 text-sm text-gray-700 text-right">
+                  <button
+                    className="bg-red-400 hover:bg-red-500 text-white py-1 px-3 rounded-md"
+                    onClick={() => handleDeleteUser(user._id)}
+                    disabled={user.role === "admin"}
+                  >
+                    Deletar
+                  </button>
                 </td>
                 <td className="py-3 text-sm text-gray-700 text-right">
                   {formatStorage(user.storageUsed)}

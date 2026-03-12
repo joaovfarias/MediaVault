@@ -4,8 +4,16 @@ import { useNavigate } from "react-router-dom";
 
 export default function FolderComponent({
   folder = { name: "New Folder", isStarred: false },
+  onUnstar,
+  variant,
+  onDelete,
+  onRename,
 }: {
   folder?: { _id?: string; name: string; isStarred: boolean };
+  onUnstar?: (folderId: string) => void;
+  variant?: string;
+  onDelete?: (folderId: string) => void;
+  onRename?: (folderId: string, newName: string) => void;
 }) {
   const navigate = useNavigate();
 
@@ -29,7 +37,13 @@ export default function FolderComponent({
             {folder.name}
           </span>
         </div>
-        <FolderSettings folder={folder} />
+        <FolderSettings
+          folder={folder}
+          onUnstar={onUnstar}
+          variant={variant}
+          onDelete={onDelete}
+          onRename={onRename}
+        />
       </div>
     </div>
   );

@@ -61,13 +61,20 @@ export default function StarredPage() {
     };
     getStarredItems();
 
-    window.addEventListener("files:updated", getStarredItems);
-    window.addEventListener("folders:updated", getStarredItems);
-
-    return () => {
-      window.removeEventListener("files:updated", getStarredItems);
-    };
+    return () => {};
   }, [API_BASE_URL]);
+
+  const removeFileFromStarred = (fileId: string) => {
+    setStarredFiles((prevFiles) =>
+      prevFiles.filter((file) => file._id !== fileId),
+    );
+  };
+
+  const removeFolderFromStarred = (folderId: string) => {
+    setStarredFolders((prevFolders) =>
+      prevFolders.filter((folder) => folder._id !== folderId),
+    );
+  };
 
   if (loading) {
     return (
@@ -80,10 +87,20 @@ export default function StarredPage() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-10 ml-5 mt-5 pr-10">
       {starredFiles?.map((file) => (
-        <FileComponent key={file._id} file={file} />
+        <FileComponent
+          key={file._id}
+          file={file}
+          onUnstar={removeFileFromStarred}
+          onDelete={removeFileFromStarred}
+        />
       ))}
       {starredFolders?.map((folder) => (
-        <FolderComponent key={folder._id} folder={folder} />
+        <FolderComponent
+          key={folder._id}
+          folder={folder}
+          onUnstar={removeFolderFromStarred}
+          onDelete={removeFolderFromStarred}
+        />
       ))}
     </div>
   );

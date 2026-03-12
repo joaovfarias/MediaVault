@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Snackbar } from "@mui/material";
+import FeedbackComponent from "./FeedbackComponent";
 import { MdOutlineDriveFileRenameOutline } from "react-icons/md";
 import { HiOutlineTrash } from "react-icons/hi2";
 import { BsThreeDotsVertical } from "react-icons/bs";
@@ -9,15 +9,27 @@ import { IoStar, IoStarOutline } from "react-icons/io5";
 
 export default function FolderSettings({
   folder,
+  onUnstar,
+  variant,
+  onDelete,
+  onRename,
 }: {
   folder: { _id?: string; name: string; isStarred: boolean };
+  onUnstar?: (folderId: string) => void;
+  variant?: string;
+  onDelete?: (folderId: string) => void;
+  onRename?: (folderId: string, newName: string) => void;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const closeTimeoutRef = useRef<number | null>(null);
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
+    "error",
+  );
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isStarred, setIsStarred] = useState(folder.isStarred);
   const menuContainerRef = useRef<HTMLDivElement>(null);
 
   const animationDuration = 200;
@@ -82,6 +94,7 @@ export default function FolderSettings({
 
   const handleDeleteFolder = async () => {
     if (!token) {
+      setSnackbarSeverity("error");
       setSnackbarMessage(
         "Token de autorização não disponível. Faça login novamente.",
       );
@@ -90,6 +103,7 @@ export default function FolderSettings({
     }
 
     if (!folder._id) {
+      setSnackbarSeverity("error");
       setSnackbarMessage("ID da pasta não disponível");
       setShowSnackbar(true);
       return;
@@ -106,14 +120,16 @@ export default function FolderSettings({
     );
 
     if (deleteResponse.ok) {
+      setSnackbarSeverity("success");
       setSnackbarMessage("Pasta deletada com sucesso");
       setShowSnackbar(true);
-      window.dispatchEvent(new CustomEvent("folders:updated"));
+      if (folder._id) onDelete?.(folder._id);
     } else {
       const errorData = (await deleteResponse.json().catch(() => null)) as {
         error?: string;
         message?: string;
       } | null;
+      setSnackbarSeverity("error");
       setSnackbarMessage(
         errorData?.error ?? errorData?.message ?? "Failed to delete folder",
       );
@@ -123,6 +139,7 @@ export default function FolderSettings({
 
   const handleStarFolder = async () => {
     if (!token) {
+      setSnackbarSeverity("error");
       setSnackbarMessage(
         "Token de autorização não disponível. Faça login novamente.",
       );
@@ -131,6 +148,7 @@ export default function FolderSettings({
     }
 
     if (!folder._id) {
+      setSnackbarSeverity("error");
       setSnackbarMessage("ID da pasta não disponível");
       setShowSnackbar(true);
       return;
@@ -147,14 +165,34 @@ export default function FolderSettings({
     );
 
     if (starResponse.ok) {
-      setSnackbarMessage("Pasta estrelada com sucesso");
-      setShowSnackbar(true);
-      window.dispatchEvent(new CustomEvent("folders:updated"));
+      if (variant !== "MyFilesPage") {
+        if (isStarred) {
+          setSnackbarMessage("Pasta desfavoritada com sucesso");
+          setShowSnackbar(true);
+          setSnackbarSeverity("success");
+          if (onUnstar) {
+            onUnstar(folder._id);
+          }
+        }
+      } else {
+        if (isStarred) {
+          setSnackbarMessage("Pasta desfavoritada com sucesso");
+          setShowSnackbar(true);
+          setSnackbarSeverity("success");
+          setIsStarred(false);
+        } else {
+          setSnackbarMessage("Pasta favoritada com sucesso");
+          setShowSnackbar(true);
+          setSnackbarSeverity("success");
+          setIsStarred(true);
+        }
+      }
     } else {
       const errorData = (await starResponse.json().catch(() => null)) as {
         error?: string;
         message?: string;
       } | null;
+      setSnackbarSeverity("error");
       setSnackbarMessage(
         errorData?.error ?? errorData?.message ?? "Failed to star folder",
       );
@@ -165,7 +203,11 @@ export default function FolderSettings({
   return (
     <>
       {isEditingName && (
-        <RenameFolder folder={folder} isEditingName={setIsEditingName} />
+        <RenameFolder
+          folder={folder}
+          isEditingName={setIsEditingName}
+          onRename={onRename}
+        />
       )}
 
       <div
@@ -185,22 +227,22 @@ export default function FolderSettings({
               onClick={(event) => {
                 event.stopPropagation();
                 handleStarFolder();
-                setIsMenuVisible(false);
+                closeMenu();
               }}
             >
-              {folder.isStarred ? (
+              {isStarred ? (
                 <IoStar className="text-lg text-[#444746] hover:text-[#0d47a1] cursor-pointer w-4 h-4 shrink-0" />
               ) : (
                 <IoStarOutline className="text-lg text-[#444746] hover:text-[#0d47a1] cursor-pointer w-4 h-4 shrink-0" />
               )}
-              {!folder.isStarred ? "Favoritar" : "Desfavoritar"}
+              {!isStarred ? "Favoritar" : "Desfavoritar"}
             </button>
             <button
               type="button"
               className="flex flex-row gap-3 items-center w-full text-left px-3 py-2 rounded-lg text-sm text-[#444746] hover:bg-[#e0f7fa] hover:cursor-pointer"
               onClick={(event) => {
                 event.stopPropagation();
-                setIsMenuVisible(false);
+                closeMenu();
                 setIsEditingName(true);
               }}
             >
@@ -213,7 +255,7 @@ export default function FolderSettings({
               onClick={(event) => {
                 event.stopPropagation();
                 handleDeleteFolder();
-                setIsMenuVisible(false);
+                closeMenu();
               }}
             >
               <HiOutlineTrash className="text-lg text-[#444746] hover:text-[#0d47a1] cursor-pointer w-4 h-4 shrink-0" />
@@ -233,12 +275,11 @@ export default function FolderSettings({
         </div>
       </div>
 
-      <Snackbar
-        open={showSnackbar}
-        autoHideDuration={6000}
-        onClose={() => setShowSnackbar(false)}
+      <FeedbackComponent
         message={snackbarMessage}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        severity={snackbarSeverity}
+        open={showSnackbar}
+        handleClose={() => setShowSnackbar(false)}
       />
     </>
   );
