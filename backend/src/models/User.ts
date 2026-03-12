@@ -8,6 +8,7 @@ export interface IUser extends Document {
   storageUsed: number;
   role: string;
   fileCount: number;
+  isGuest?: boolean;
   comparePassword(candidate: string): Promise<boolean>;
 }
 
@@ -19,6 +20,7 @@ const userSchema = new mongoose.Schema<IUser>(
     storageUsed: { type: Number, default: 0 },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     fileCount: { type: Number, default: 0 },
+    isGuest: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

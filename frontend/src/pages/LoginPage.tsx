@@ -74,6 +74,40 @@ export default function LoginPage() {
     setFormData((prev) => ({ ...prev, mostrarSenha: !prev.mostrarSenha }));
   };
 
+  const handleGuestAccess = () => {
+    fetch(`${API_BASE_URL}/api/auth/guest`, {
+      method: "POST",
+    }).then((response) => {
+      if (!response.ok) {
+        return response.json().then(() => {
+          setErroMessage("Falha ao acessar como convidado. Tente novamente.");
+          setShowErrorSnackbar(true);
+          throw new Error("Falha ao acessar como convidado. Tente novamente.");
+        });
+      }
+
+      return response
+        .json()
+        .then(
+          (data: {
+            token?: string;
+            _id: string;
+            username: string;
+            email: string;
+            role: string;
+          }) => {
+            if (data.token) {
+              localStorage.setItem("token", data.token);
+            }
+
+            localStorage.setItem("user", JSON.stringify(data));
+
+            navigate("/");
+          },
+        );
+    });
+  };
+
   return (
     <div className="relative min-h-[calc(100vh-128px)] flex flex-col items-center justify-center overflow-hidden">
       <img src={MVLogoText} alt="MediaVault Logo" className="w-40" />
@@ -178,7 +212,7 @@ export default function LoginPage() {
         ou{" "}
         <a
           className="text-[#006D7A] hover:underline cursor-pointer"
-          onClick={() => navigate("/")}
+          onClick={handleGuestAccess}
         >
           Acesse como convidado
         </a>

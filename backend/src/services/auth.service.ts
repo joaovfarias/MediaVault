@@ -76,3 +76,29 @@ export const loginUser = async ({ email, password }: LoginInput) => {
     token,
   };
 };
+
+export const guestLoginUser = async () => {
+  const guestId = crypto.randomUUID().slice(0, 6);
+  const randomPassword = crypto
+    .getRandomValues(new Uint32Array(1))[0]
+    .toString(36)
+    .slice(-6);
+
+  const guestUser = await User.create({
+    username: `guest_${guestId}`,
+    email: `guest_${guestId}@example.com`,
+    password: randomPassword,
+    isGuest: true,
+  });
+
+  const token = generateToken(guestUser._id.toString());
+
+  return {
+    _id: guestUser._id.toString(),
+    username: guestUser.username,
+    email: guestUser.email,
+    role: guestUser.role,
+    isGuest: guestUser.isGuest,
+    token,
+  };
+};

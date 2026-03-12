@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
-import { loginUser, registerUser } from "../services/auth.service";
+import {
+  loginUser,
+  registerUser,
+  guestLoginUser,
+} from "../services/auth.service";
 import { AppError } from "../services/appError";
 
 export const register = async (req: Request, res: Response) => {
@@ -22,6 +26,19 @@ export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
     const authPayload = await loginUser({ email, password });
 
+    res.json(authPayload);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const guestLogin = async (req: Request, res: Response) => {
+  try {
+    const authPayload = await guestLoginUser();
     res.json(authPayload);
   } catch (error) {
     if (error instanceof AppError) {
