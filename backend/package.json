@@ -2,6 +2,7 @@
   "scripts": {
     "dev": "nodemon -L --watch src --exec ts-node src/app.ts",
     "build": "tsc",
+    "prod": "NODE_ENV=production node dist/app.js",
     "test": "jest --verbose"
   },
   "dependencies": {

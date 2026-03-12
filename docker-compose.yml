@@ -11,8 +11,8 @@ services:
       - /app/node_modules
       - ~/.aws:/root/.aws:ro
     environment:
+      - NODE_ENV=development
       - AWS_PROFILE=media-vault
-
     env_file:
       - ./backend/.env.dev
     depends_on:

@@ -2,13 +2,16 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import path from "path";
 import authRoutes from "./routes/auth.routes";
 import fileRoutes from "./routes/file.routes";
 import userRoutes from "./routes/user.routes";
 import folderRoutes from "./routes/folder.routes";
 import adminRoutes from "./routes/admin.routes";
 
-dotenv.config();
+const env = process.env.NODE_ENV || "development";
+const envFile = env === "production" ? ".env.prod" : ".env.dev";
+dotenv.config({ path: path.resolve(__dirname, "../", envFile) });
 
 const app = express();
 
