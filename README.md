@@ -5,6 +5,8 @@ O sistema permite que usuários façam upload, organizem e visualizem arquivos n
 
 O projeto foi desenvolvido com foco em arquitetura moderna de aplicações web, utilizando upload direto para o S3, geração de previews com AWS Lambda e uma interface web responsiva.
 
+<img src="mediavault.JPG" alt="Imagem da aplicação" />
+
 ---
 
 # Visão Geral
