@@ -1,14 +1,15 @@
 name: Backend CD
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "backend/**"
+  workflow_run:
+    workflows: ["Backend CI"]
+    types:
+      - completed
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Deploy to EC2

@@ -1,0 +1,25 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ~/.aws:/root/.aws:ro
+    environment:
+      - NODE_ENV=development
+      - AWS_PROFILE=media-vault
+    env_file:
+      - ./backend/.env.dev
+    depends_on:
+      - mongo
+    command: npm run dev
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
