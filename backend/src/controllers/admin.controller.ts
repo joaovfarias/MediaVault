@@ -6,6 +6,6 @@ export const getAdminDashboard = async (req: Request, res: Response) => {
     const users = await getAllUsersWithStorage();
     res.status(200).json({ users });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching admin dashboard data." });
+    res.status(500).json({ message: "Error fetching admin dashboard data" });
   }
 };
