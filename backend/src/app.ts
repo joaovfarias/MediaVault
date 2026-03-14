@@ -52,7 +52,3 @@ mongoose
 app.get("/", async (req, res) => {
   res.json({ message: "Welcome to the MediaVault API!" });
 });
-
-app.get("/ci-test", (req, res) => {
-  res.json({ message: "CI/CD pipeline works 🚀" });
-});
