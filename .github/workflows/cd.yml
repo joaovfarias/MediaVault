@@ -20,6 +20,11 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd MediaVault/
-            cd backend/
-            git pull
-            docker compose -f docker-compose.prod.yml up --build -d
+            git fetch origin
+            git reset --hard origin/main
+
+            cd backend
+
+            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml up -d --build
+            docker image prune -f
