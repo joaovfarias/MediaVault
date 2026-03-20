@@ -16,10 +16,11 @@ export default function Header() {
 
   const isAdmin = useMemo(() => {
     try {
-      const userRaw = localStorage.getItem("user");
-      if (userRaw) {
-        const user = JSON.parse(userRaw) as { role?: string };
-        return user.role === "admin";
+      const token = localStorage.getItem("token");
+      if (token) {
+        // decode token to get user role
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        return payload.role === "admin";
       }
     } catch {
       // ignore parse errors
@@ -40,7 +41,6 @@ export default function Header() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
     navigate("/login");
   };
 

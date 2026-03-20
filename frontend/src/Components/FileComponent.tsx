@@ -42,17 +42,6 @@ export default function FileComponent({
     if (directToken) {
       return directToken;
     }
-    const userRaw = localStorage.getItem("user");
-    if (userRaw) {
-      try {
-        const parsedUser = JSON.parse(userRaw) as { token?: string };
-        if (parsedUser.token) {
-          return parsedUser.token;
-        }
-      } catch {
-        return null;
-      }
-    }
     return null;
   };
   const token = getAuthToken();

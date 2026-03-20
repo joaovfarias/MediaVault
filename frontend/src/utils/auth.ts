@@ -1,20 +1,9 @@
-export function getAuthToken(): string | null {
+export function getAuthToken(): string {
   const directToken = localStorage.getItem("token");
   if (directToken) {
     return directToken;
   }
-
-  const userRaw = localStorage.getItem("user");
-  if (!userRaw) {
-    return null;
-  }
-
-  try {
-    const parsedUser = JSON.parse(userRaw) as { token?: string };
-    return parsedUser.token ?? null;
-  } catch {
-    return null;
-  }
+  throw new Error("No authentication token found");
 }
 
 export function isAuthenticated(): boolean {

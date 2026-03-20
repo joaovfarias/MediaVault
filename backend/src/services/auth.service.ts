@@ -44,7 +44,7 @@ export const registerUser = async ({
     password,
   });
 
-  const token = generateToken(user._id.toString());
+  const token = generateToken(user._id.toString(), user.role);
 
   return {
     _id: user._id.toString(),
@@ -66,7 +66,7 @@ export const loginUser = async ({ email, password }: LoginInput) => {
     throw new AppError("Invalid credentials", 401);
   }
 
-  const token = generateToken(user._id.toString());
+  const token = generateToken(user._id.toString(), user.role);
 
   return {
     _id: user._id.toString(),
@@ -89,9 +89,10 @@ export const guestLoginUser = async () => {
     email: `guest_${guestId}@example.com`,
     password: randomPassword,
     isGuest: true,
+    role: "user",
   });
 
-  const token = generateToken(guestUser._id.toString());
+  const token = generateToken(guestUser._id.toString(), guestUser.role);
 
   return {
     _id: guestUser._id.toString(),

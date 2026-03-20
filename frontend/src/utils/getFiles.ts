@@ -12,10 +12,7 @@ export default function getFiles(
 ) {
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-  const token =
-    localStorage.getItem("token") ||
-    (JSON.parse(localStorage.getItem("user") || "{}") as { token?: string })
-      .token;
+  const token = localStorage.getItem("token") || null;
   if (!token) {
     console.error("No auth token found");
     return;

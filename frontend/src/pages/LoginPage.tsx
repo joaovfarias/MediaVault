@@ -62,8 +62,6 @@ export default function LoginPage() {
               localStorage.setItem("token", data.token);
             }
 
-            localStorage.setItem("user", JSON.stringify(data));
-
             navigate("/");
           },
         );
@@ -99,8 +97,6 @@ export default function LoginPage() {
             if (data.token) {
               localStorage.setItem("token", data.token);
             }
-
-            localStorage.setItem("user", JSON.stringify(data));
 
             navigate("/");
           },
