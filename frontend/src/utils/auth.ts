@@ -1,9 +1,9 @@
-export function getAuthToken(): string {
+export function getAuthToken(): string | null {
   const directToken = localStorage.getItem("token");
   if (directToken) {
     return directToken;
   }
-  throw new Error("No authentication token found");
+  return null;
 }
 
 export function isAuthenticated(): boolean {
